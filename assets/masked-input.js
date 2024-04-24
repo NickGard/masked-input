@@ -15,16 +15,17 @@ class MaskedInput extends HTMLInputElement {
   ];
   // TODO: progressive-reveal="pairwise leading|following"
   // TODO: form validation
-  // TODO: password type
-  // TODO: inputmode by type
+  // TODO: test rtl inputs with rtl language
+  // TODO: test list attr autocomplete
 
   #unmaskedValue = "";
   #maskedValue = "";
   #mask = "";
   #maskReplacementCharacter = "_";
+  #passwordChar = "•";
   #replacementSlots = 0;
   #valueCharacterCount = 0;
-  #valueCharacters = [];
+  #characterSlots = [];
   #isValueReflected = true;
   #maskableTypes = [
     "text",
@@ -36,6 +37,7 @@ class MaskedInput extends HTMLInputElement {
     "number",
   ];
   #internalType = "text";
+  #isInternalTypeCalibration = false;
 
   get maskReplacementCharacter() {
     return this.#maskReplacementCharacter;
@@ -56,20 +58,18 @@ class MaskedInput extends HTMLInputElement {
   get maskedValue() {
     return this.#getMaskVisibility()
       ? this.#maskedValue
-      : this.#valueCharacters
+      : this.#characterSlots
+          .slice(0, this.#valueCharacterCount)
           .map(({ displayChar }) => displayChar)
           .filter(Boolean)
           .join("");
   }
   set maskedValue(v) {
-    throw new Error("maskedValue is readonly");
+    throw new DOMException("maskedValue is readonly", "NotSupportedError");
   }
 
   get value() {
-    return this.#valueCharacters
-      .map(({ char }) => char)
-      .filter(Boolean)
-      .join("");
+    return this.#unmaskedValue;
   }
   set value(value) {
     // stop reflecting the attribute once the value is set programatically
@@ -83,7 +83,13 @@ class MaskedInput extends HTMLInputElement {
     return this.#getNativeInput().valueAsNumber;
   }
   set valueAsNumber(value) {
-    this.#setValue(this.#getNativeInput().valueAsNumber);
+    const nativeInput = this.#getNativeInput();
+
+    // this will throw if an invalid value set or if the input is non-numeric type
+    nativeInput.valueAsNumber = value;
+
+    this.#setValue(nativeInput.value);
+    this.#applyMask();
   }
 
   get type() {
@@ -99,58 +105,94 @@ class MaskedInput extends HTMLInputElement {
       );
     }
 
-    if (type !== "text") {
-      this.#internalType = type;
+    this.#internalType = type;
+
+    if (super.type !== "text") {
       super.type = "text";
     }
+
     // show the correct soft keyboard for the input type
     super.inputMode =
       type === "password" ? "text" : type === "number" ? "decimal" : type;
   }
 
   select() {
-    this.setSelectionRange(0, this.#getPositionOfCharAtIndex(-1)?.end ?? 0);
+    this.setSelectionRange(
+      this.#characterSlots.at(0)?.start ?? 0,
+      this.#getEndPosition(),
+      this.selectionDirection
+    );
   }
 
-  setRangeText = (replacement, start, end, selectMode = "preserve") => {
-    const {
-      charIndexAfterSelection,
-      charIndexBeforeSelection,
-      selectedCharIndexes,
-      selectionStart,
-    } = this.#getSelectionPosition();
-    const unmaskedSelectionStart =
-      this.#valueCharacters.at(start ?? charIndexBeforeSelection)?.position
-        ?.end ?? 0;
-    const unmaskedSelectionEnd =
-      end != null
-        ? this.#valueCharacters.at(end)?.position?.start
-        : selectedCharIndexes.length > 0
-        ? this.#valueCharacters.at(selectedCharIndexes.at(-1)).position.end
-        : charIndexAfterSelection != null
-        ? this.#valueCharacters.at(charIndexAfterSelection).position.start
-        : this.#unmaskedValue.length;
+  setRangeText = (
+    replacement,
+    start = this.selectionStart,
+    end = this.selectionEnd,
+    selectMode = "preserve"
+  ) => {
+    if (replacement == null) {
+      throw new TypeError(
+        "Failed to execute 'setRangeText' on 'HTMLInputElement': 1 argument required, but only 0 present."
+      );
+    }
 
-    this.#setValue(
-      this.#getNativeInput().setRangeText(
-        replacement,
-        unmaskedSelectionStart,
-        unmaskedSelectionEnd,
-        selectMode
-      ).value
-    );
+    this.setSelectionRange(start, end, this.selectionDirection);
+    const { charIndexBeforeSelection } = this.#getSelectionPosition();
+    this.#insertText(replacement);
+
+    switch (selectMode) {
+      case "select": {
+        const newEnd = this.#getPositionOfCharAtIndex(
+          (charIndexBeforeSelection || 0) +
+            this.#toGraphemes(replacement).length
+        )?.end;
+        this.setSelectionRange(start, newEnd, this.selectionDirection);
+        break;
+      }
+      case "start": {
+        this.setSelectionRange(start, start, this.selectionDirection);
+        break;
+      }
+      case "end": {
+        const newEnd = this.#getPositionOfCharAtIndex(
+          (charIndexBeforeSelection || 0) +
+            this.#toGraphemes(replacement).length
+        )?.end;
+        this.setSelectionRange(newEnd, newEnd, this.selectionDirection);
+        break;
+      }
+      default: {
+        // "preserve" is the default
+        this.setSelectionRange(start, end, this.selectionDirection);
+        break;
+      }
+    }
   };
 
   stepUp = (stepIncrement) => {
-    return this.#getNativeInput().stepUp(stepIncrement);
+    const nativeInput = this.#getNativeInput();
+    nativeInput.stepUp(stepIncrement);
+    this.#setValue(nativeInput.value);
+    this.#applyMask();
   };
 
   stepDown = (stepIncrement) => {
-    return this.#getNativeInput().stepDown(stepIncrement);
+    const nativeInput = this.#getNativeInput();
+    nativeInput.stepDown(stepIncrement);
+    this.#setValue(nativeInput.value);
+    this.#applyMask();
   };
 
   checkValidity = () => {
     return this.#getNativeInput().checkValidity();
+  };
+
+  getAttribute = (name) => {
+    if (name === "type") {
+      return this.#internalType;
+    } else {
+      return this.attributes[name]?.value ?? null;
+    }
   };
 
   attributeChangedCallback(name, oldValue, newValue) {
@@ -177,10 +219,19 @@ class MaskedInput extends HTMLInputElement {
           );
         }
 
-        if (newValue !== "text") {
-          this.#internalType = newValue;
+        if (this.#isInternalTypeCalibration) {
+          // super.type = "text" triggers a reflow that we should ignore
+          this.#isInternalTypeCalibration = false;
+          break;
+        }
+
+        this.#internalType = newValue;
+
+        if (super.type !== "text") {
+          this.#isInternalTypeCalibration = true;
           super.type = "text";
         }
+
         // show the correct soft keyboard for the input type
         super.inputMode =
           newValue === "password"
@@ -199,11 +250,7 @@ class MaskedInput extends HTMLInputElement {
       }
 
       case "value": {
-        const currentValue = this.#valueCharacters
-          .map(({ char }) => char)
-          .filter(Boolean)
-          .join("");
-        if (this.#isValueReflected && newValue !== currentValue) {
+        if (this.#isValueReflected && newValue !== this.#unmaskedValue) {
           // do not limit the value to maxlength when set programatically
           this.#unmaskedValue = newValue;
           this.#applyMask();
@@ -214,12 +261,13 @@ class MaskedInput extends HTMLInputElement {
   }
 
   #applyMask = () => {
-    this.#valueCharacters = [];
+    this.#characterSlots = [];
     const chars = this.#toGraphemes(this.#unmaskedValue ?? "");
 
     this.#replacementSlots = 0;
     this.#valueCharacterCount = chars.length;
 
+    const usedDisplayChars = [];
     let position = 0;
     let maskedValue = this.#mask.replaceAll(
       this.#maskReplacementCharacter,
@@ -227,24 +275,32 @@ class MaskedInput extends HTMLInputElement {
         const char = chars.shift();
         // replace actual char with bullet character
         const displayChar =
-          this.#internalType === "password" && char != null ? "•" : char;
+          char == null
+            ? this.hasAttribute("show-replacement-characters")
+              ? match
+              : " "
+            : this.#internalType === "password"
+            ? this.#passwordChar
+            : char;
         const charLength = displayChar?.length ?? 1;
         const nextPosition = position + charLength;
+        const maskOffset =
+          usedDisplayChars.join("").length -
+          usedDisplayChars.length * this.#maskReplacementCharacter.length +
+          offset;
 
-        this.#valueCharacters.push({
+        this.#characterSlots.push({
           char,
           displayChar,
           position: { start: position, end: nextPosition },
-          positionInMask: { start: offset, end: offset + charLength },
+          positionInMask: { start: maskOffset, end: maskOffset + charLength },
         });
 
+        usedDisplayChars.push(displayChar);
         position = nextPosition;
         this.#replacementSlots++;
 
-        return (
-          displayChar ||
-          (this.hasAttribute("show-replacement-characters") ? match : " ")
-        );
+        return displayChar;
       }
     );
 
@@ -256,7 +312,7 @@ class MaskedInput extends HTMLInputElement {
       const nextPosition = position + displayChar.length;
       const nextMaskEndPosition = maskEndPosition + displayChar.length;
 
-      this.#valueCharacters.push({
+      this.#characterSlots.push({
         char,
         displayChar,
         position: { start: position, end: nextPosition },
@@ -272,22 +328,25 @@ class MaskedInput extends HTMLInputElement {
     });
 
     this.#maskedValue = maskedValue;
-    const unmaskedDisplayValue = this.#valueCharacters
+    const unmaskedDisplayValue = this.#characterSlots
       .map(({ displayChar }) => displayChar)
       .filter(Boolean)
       .join("");
+
+    // grab current selectionDirection
+    const currentSelectionDirection = this.selectionDirection;
 
     // apply mask
     super.value = this.#getMaskVisibility()
       ? this.#maskedValue
       : unmaskedDisplayValue;
-  };
 
-  #getPlainValue = () => {
-    return this.#valueCharacters
-      .map(({ displayChar }) => displayChar)
-      .filter(Boolean)
-      .join("");
+    // reapply selection direction since setting the super value removes it
+    this.setSelectionRange(
+      this.selectionStart,
+      this.selectionEnd,
+      currentSelectionDirection
+    );
   };
 
   #getMaskVisibility = () => {
@@ -306,18 +365,20 @@ class MaskedInput extends HTMLInputElement {
     let charIndexBeforeSelection;
     let charIndexAfterSelection;
 
-    this.#valueCharacters.forEach(({ position, positionInMask }, index) => {
-      const { start: charStartPosition, end: charEndPostition } = isMaskShown
-        ? positionInMask
-        : position;
-      if (charEndPostition <= this.selectionStart) {
-        charIndexBeforeSelection = index;
-      } else if (charStartPosition >= this.selectionEnd) {
-        charIndexAfterSelection ??= index;
-      } else {
-        selectedCharIndexes.push(index);
+    this.#characterSlots.forEach(
+      ({ char, position, positionInMask }, index) => {
+        const { start: charStartPosition, end: charEndPostition } = isMaskShown
+          ? positionInMask
+          : position;
+        if (charEndPostition <= this.selectionStart) {
+          charIndexBeforeSelection = index;
+        } else if (charStartPosition >= this.selectionEnd) {
+          charIndexAfterSelection ??= index;
+        } else if (char != null) {
+          selectedCharIndexes.push(index);
+        }
       }
-    });
+    );
 
     return {
       charIndexBeforeSelection,
@@ -329,21 +390,31 @@ class MaskedInput extends HTMLInputElement {
   };
 
   #getPositionOfCharAtIndex = (index) => {
+    if (index == null || Number.isNaN(index)) {
+      return NaN;
+    }
+
+    if (this.#characterSlots.length === 0) {
+      // no mask and no value chars
+      return { start: 0, end: 0 };
+    }
+
     const positionKey = this.#getMaskVisibility()
       ? "positionInMask"
       : "position";
-    return this.#valueCharacters.at(index)?.[positionKey];
+    return this.#characterSlots.at(index)?.[positionKey];
   };
 
   #getEndPosition = () => {
-    const firstEmptySlot = this.#valueCharacters.find(
-      ({ char }) => char == null
-    );
-    return firstEmptySlot
-      ? this.#getPositionOfCharAtIndex(
-          this.#valueCharacters.indexOf(firstEmptySlot)
-        ).start
-      : this.#getPositionOfCharAtIndex(-1).end;
+    if (this.#valueCharacterCount === 0) {
+      // no value chars
+      return this.#getPositionOfCharAtIndex(0).start;
+    } else if (this.#valueCharacterCount >= this.#replacementSlots) {
+      // filled OR overfilled the mask
+      return this.#getPositionOfCharAtIndex(-1).end;
+    } else {
+      return this.#getPositionOfCharAtIndex(this.#valueCharacterCount).start;
+    }
   };
 
   #deleteBackward = () => {
@@ -359,35 +430,41 @@ class MaskedInput extends HTMLInputElement {
 
     const mapper =
       selectedCharIndexes.length > 0
-        ? ({ displayChar }, i) =>
-            selectedCharIndexes.includes(i) ? null : displayChar
-        : ({ displayChar }, i) =>
-            i !== charIndexBeforeSelection ? displayChar : null;
+        ? ({ char }, i) => (selectedCharIndexes.includes(i) ? null : char)
+        : ({ char }, i) => (i !== charIndexBeforeSelection ? char : null);
+    const didChange = this.#setValue(
+      this.#characterSlots.map(mapper).filter(Boolean).join("")
+    );
 
-    this.#setValue(this.#valueCharacters.map(mapper).filter(Boolean).join(""));
+    if (!didChange) {
+      return;
+    }
+
     this.#applyMask();
 
     // call #getPositionOfCharAtIndex _after_ applying the mask, in case it changed from masked to unmasked due to unmasked value length
     let nextPosition;
     if (selectedCharIndexes.length > 0) {
-      nextPosition = this.#getPositionOfCharAtIndex(
-        selectedCharIndexes.at(0)
-      ).start;
+      if (selectedCharIndexes.at(0) >= this.#valueCharacterCount) {
+        nextPosition = this.#getEndPosition();
+      } else {
+        nextPosition = this.#getPositionOfCharAtIndex(
+          selectedCharIndexes.at(0)
+        ).start;
+      }
     } else if (
-      this.#valueCharacters.length >= this.#replacementSlots &&
+      this.#valueCharacterCount >= this.#replacementSlots &&
       charIndexAfterSelection == null
     ) {
       // at the end of an overflowed mask
-      nextPosition = this.#getPositionOfCharAtIndex(
-        charIndexBeforeSelection - 1
-      ).end;
+      nextPosition = this.#getEndPosition();
     } else {
       nextPosition = this.#getPositionOfCharAtIndex(
         charIndexBeforeSelection
       ).start;
     }
 
-    this.setSelectionRange(nextPosition, nextPosition);
+    this.setSelectionRange(nextPosition, nextPosition, this.selectionDirection);
   };
 
   #deleteForward = () => {
@@ -405,12 +482,17 @@ class MaskedInput extends HTMLInputElement {
 
     const mapper =
       selectedCharIndexes.length > 0
-        ? ({ displayChar }, i) =>
-            selectedCharIndexes.includes(i) ? null : displayChar
-        : ({ displayChar }, i) =>
-            i !== charIndexAfterSelection ? displayChar : null;
+        ? ({ char }, i) => (selectedCharIndexes.includes(i) ? null : char)
+        : ({ char }, i) => (i !== charIndexAfterSelection ? char : null);
 
-    this.#setValue(this.#valueCharacters.map(mapper).filter(Boolean).join(""));
+    const didChange = this.#setValue(
+      this.#characterSlots.map(mapper).filter(Boolean).join("")
+    );
+
+    if (!didChange) {
+      return;
+    }
+
     this.#applyMask();
 
     // call #getPositionOfCharAtIndex _after_ applying the mask, in case it changed from masked to unmasked due to unmasked value length
@@ -423,7 +505,7 @@ class MaskedInput extends HTMLInputElement {
           : this.#getPositionOfCharAtIndex(selectedCharIndexes.at(0)).start;
     } else if (charIndexBeforeSelection == null) {
       nextPosition = this.#getPositionOfCharAtIndex(0).start;
-    } else if (charIndexAfterSelection > this.#valueCharacters.length - 1) {
+    } else if (charIndexAfterSelection > this.#characterSlots.length - 1) {
       nextPosition = this.#getPositionOfCharAtIndex(
         charIndexBeforeSelection
       ).end;
@@ -438,7 +520,7 @@ class MaskedInput extends HTMLInputElement {
         endOfStart === this.selectionStart ? endOfStart : startOfEnd;
     }
 
-    this.setSelectionRange(nextPosition, nextPosition);
+    this.setSelectionRange(nextPosition, nextPosition, this.selectionDirection);
   };
 
   #deleteToBeginning = () => {
@@ -448,15 +530,22 @@ class MaskedInput extends HTMLInputElement {
       return;
     }
 
-    const mapper = ({ displayChar }, i) =>
-      i <= charIndexBeforeSelection ? null : displayChar;
+    const mapper = ({ char }, i) =>
+      i <= charIndexBeforeSelection ? null : char;
 
-    this.#setValue(this.#valueCharacters.map(mapper).filter(Boolean).join(""));
+    const didChange = this.#setValue(
+      this.#characterSlots.map(mapper).filter(Boolean).join("")
+    );
+
+    if (!didChange) {
+      return;
+    }
+
     this.#applyMask();
 
     // call #getPositionOfCharAtIndex _after_ applying the mask, in case it changed from masked to unmasked due to unmasked value length
     const nextPosition = this.#getPositionOfCharAtIndex(0).start;
-    this.setSelectionRange(nextPosition, nextPosition);
+    this.setSelectionRange(nextPosition, nextPosition, this.selectionDirection);
   };
 
   #deleteToEnd = () => {
@@ -470,19 +559,26 @@ class MaskedInput extends HTMLInputElement {
       return;
     }
 
-    const mapper = ({ displayChar }, i) =>
-      i < charIndexAfterSelection ? displayChar : null;
+    const mapper = ({ char }, i) => (i < charIndexAfterSelection ? char : null);
 
-    this.#setValue(this.#valueCharacters.map(mapper).filter(Boolean).join(""));
+    const didChange = this.#setValue(
+      this.#characterSlots.map(mapper).filter(Boolean).join("")
+    );
+
+    if (!didChange) {
+      return;
+    }
+
     this.#applyMask();
 
     // call #getPositionOfCharAtIndex _after_ applying the mask, in case it changed from masked to unmasked due to unmasked value length
     const nextPosition =
       selectionStart ===
-      this.#getPositionOfCharAtIndex(charIndexBeforeSelection).end
+      (charIndexBeforeSelection != null &&
+        this.#getPositionOfCharAtIndex(charIndexBeforeSelection).end)
         ? selectionStart
         : this.#getEndPosition();
-    this.setSelectionRange(nextPosition, nextPosition);
+    this.setSelectionRange(nextPosition, nextPosition, this.selectionDirection);
   };
 
   #deleteWordForward = () => {
@@ -499,14 +595,47 @@ class MaskedInput extends HTMLInputElement {
 
     if (charIndexAfterSelection == null) return;
 
-    const unmaskedCursorPosition = this.#valueCharacters.at(
+    const unmaskedCursorPosition = this.#characterSlots.at(
       charIndexAfterSelection
     ).position.start;
-    const plainValue = this.#getPlainValue();
-    const valueBeginning = plainValue.substring(0, unmaskedCursorPosition);
-    const valueEnd = plainValue.substring(unmaskedCursorPosition);
+    const valueStart = this.#unmaskedValue.substring(0, unmaskedCursorPosition);
+    const valueEnd = this.#unmaskedValue.substring(unmaskedCursorPosition);
+    let nextValueEnd;
 
-    this.#setValue(valueBeginning + valueEnd.replace(/^\s*\w+\b/, ""));
+    if (Intl.Segmenter) {
+      const segmenter = new Intl.Segmenter(this.#getElementLang(), {
+        granularity: "word",
+      });
+      const segments = Array.from(segmenter.segment(valueEnd));
+      if (segments.length > 0 && segments[0].isWordLike) {
+        nextValueEnd = segments
+          .slice(1)
+          .map(({ segment }) => segment)
+          .join("");
+      } else if (
+        segments.length > 1 &&
+        /^\s+$/u.test(segments.at(0).segment) &&
+        segments.at(1).isWordLike
+      ) {
+        // remove the leading whitespace segment and the word
+        nextValueEnd = segments
+          .slice(2)
+          .map(({ segment }) => segment)
+          .join("");
+      } else {
+        nextValueEnd = valueEnd;
+      }
+    } else {
+      // won't work for graphemes
+      nextValueEnd = valueEnd.replace(/^\s*\w+\b/, "");
+    }
+
+    const didChange = this.#setValue(valueStart + nextValueEnd);
+
+    if (!didChange) {
+      return;
+    }
+
     this.#applyMask();
 
     // call #getPositionOfCharAtIndex _after_ applying the mask, in case it changed from masked to unmasked due to unmasked value length
@@ -515,7 +644,17 @@ class MaskedInput extends HTMLInputElement {
         ? this.#getPositionOfCharAtIndex(charIndexBeforeSelection).end
         : this.#getPositionOfCharAtIndex(0).start;
 
-    this.setSelectionRange(nextPosition, nextPosition);
+    this.setSelectionRange(nextPosition, nextPosition, this.selectionDirection);
+  };
+
+  #getElementLang = () => {
+    let lang;
+    let element = this;
+    while (!lang && element) {
+      lang = element.lang;
+      element = element.parentElement;
+    }
+    return lang;
   };
 
   #deleteWordBackward = () => {
@@ -529,19 +668,51 @@ class MaskedInput extends HTMLInputElement {
 
     if (charIndexBeforeSelection == null) return;
 
-    const unmaskedCursorPosition = this.#valueCharacters.at(
+    const unmaskedCursorPosition = this.#characterSlots.at(
       charIndexBeforeSelection
     ).position.end;
-    const plainValue = this.#getPlainValue();
-    const valueBeginning = plainValue
-      .substring(0, unmaskedCursorPosition)
-      .replace(/\b\w+\s*$/, "");
-    const valueEnd = plainValue.substring(unmaskedCursorPosition);
+    const valueStart = this.#unmaskedValue.substring(0, unmaskedCursorPosition);
 
-    this.#setValue(valueBeginning + valueEnd);
+    let nextValueStart;
+
+    if (Intl.Segmenter) {
+      const segmenter = new Intl.Segmenter(this.#getElementLang(), {
+        granularity: "word",
+      });
+      const segments = Array.from(segmenter.segment(valueStart));
+      if (segments.length > 0 && segments.at(-1).isWordLike) {
+        nextValueStart = segments
+          .slice(0, -1)
+          .map(({ segment }) => segment)
+          .join("");
+      } else if (
+        segments.length > 1 &&
+        /^\s+$/u.test(segments.at(-1).segment) &&
+        segments.at(-2).isWordLike
+      ) {
+        // remove the trailing whitespace segment and the last word
+        nextValueStart = segments
+          .slice(0, -2)
+          .map(({ segment }) => segment)
+          .join("");
+      } else {
+        nextValueStart = valueStart;
+      }
+    } else {
+      // won't work for graphemes
+      nextValueStart = valueStart.replace(/\b\w+\s*$/, "");
+    }
+
+    const valueEnd = this.#unmaskedValue.substring(unmaskedCursorPosition);
+    const didChange = this.#setValue(nextValueStart + valueEnd);
+
+    if (!didChange) {
+      return;
+    }
+
     this.#applyMask();
 
-    const beginningCharCount = this.#toGraphemes(valueBeginning).length;
+    const beginningCharCount = this.#toGraphemes(nextValueStart).length;
     const endCharCount = this.#toGraphemes(valueEnd).length;
 
     // call #getPositionOfCharAtIndex _after_ applying the mask, in case it changed from masked to unmasked due to unmasked value length
@@ -554,16 +725,21 @@ class MaskedInput extends HTMLInputElement {
       nextPosition = this.#getPositionOfCharAtIndex(beginningCharCount - 1).end;
     }
 
-    this.setSelectionRange(nextPosition, nextPosition);
+    this.setSelectionRange(nextPosition, nextPosition, this.selectionDirection);
   };
 
   #deleteEntireValue = () => {
-    this.#setValue("");
+    const didChange = this.#setValue("");
+
+    if (!didChange) {
+      return;
+    }
+
     this.#applyMask();
 
     // call #getPositionOfCharAtIndex _after_ applying the mask, in case it changed from masked to unmasked due to unmasked value length
     const nextPosition = this.#getPositionOfCharAtIndex(0).start;
-    this.setSelectionRange(nextPosition, nextPosition);
+    this.setSelectionRange(nextPosition, nextPosition, this.selectionDirection);
   };
 
   #insertText = (data) => {
@@ -576,22 +752,26 @@ class MaskedInput extends HTMLInputElement {
     const insertedTextLength = this.#toGraphemes(data).length;
     const unmaskedSelectionStart =
       charIndexBeforeSelection != null
-        ? this.#valueCharacters.at(charIndexBeforeSelection).position.end
+        ? this.#characterSlots.at(charIndexBeforeSelection).position.end
         : 0;
     const unmaskedSelectionEnd =
       selectedCharIndexes.length > 0
-        ? this.#valueCharacters.at(selectedCharIndexes.at(-1)).position.end
+        ? this.#characterSlots.at(selectedCharIndexes.at(-1)).position.end
         : charIndexAfterSelection != null
-        ? this.#valueCharacters.at(charIndexAfterSelection).position.start
+        ? this.#characterSlots.at(charIndexAfterSelection).position.start
         : this.#unmaskedValue.length;
 
-    const valueBeginning = this.#getPlainValue().substring(
+    const valueBeginning = this.#unmaskedValue.substring(
       0,
       unmaskedSelectionStart
     );
-    const valueEnd = this.#getPlainValue().substring(unmaskedSelectionEnd);
+    const valueEnd = this.#unmaskedValue.substring(unmaskedSelectionEnd);
 
-    this.#setValue(valueBeginning + data + valueEnd);
+    const didChange = this.#setValue(valueBeginning + data + valueEnd);
+
+    if (!didChange) {
+      return;
+    }
 
     this.#applyMask();
 
@@ -614,10 +794,10 @@ class MaskedInput extends HTMLInputElement {
               charIndexBeforeSelection + insertedTextLength + 1
             ).start;
     }
-    this.setSelectionRange(nextPosition, nextPosition);
+    this.setSelectionRange(nextPosition, nextPosition, this.selectionDirection);
   };
 
-  #insertTranspose = (data) => {
+  #insertTranspose = () => {
     const {
       charIndexBeforeSelection,
       charIndexAfterSelection,
@@ -632,14 +812,14 @@ class MaskedInput extends HTMLInputElement {
       // at beginning of value, or at end of single char value
       return;
     }
-    const firstChar = this.#valueCharacters.at(
+    const firstChar = this.#characterSlots.at(
       atEndOfValue ? charIndexBeforeSelection - 1 : charIndexBeforeSelection
     );
-    const secondChar = this.#valueCharacters.at(
+    const secondChar = this.#characterSlots.at(
       atEndOfValue ? charIndexBeforeSelection : charIndexAfterSelection
     );
-    this.#setValue(
-      this.#valueCharacters
+    const didChange = this.#setValue(
+      this.#characterSlots
         .map((valueChar) => {
           if (valueChar === firstChar) {
             return secondChar.char;
@@ -651,14 +831,25 @@ class MaskedInput extends HTMLInputElement {
         })
         .join("")
     );
+
+    if (!didChange) {
+      return;
+    }
+
     const nextPosition = this.#getPositionOfCharAtIndex(
-      this.#valueCharacters.indexOf(secondChar)
+      this.#characterSlots.indexOf(secondChar)
     ).end;
     this.#applyMask();
-    this.setSelectionRange(nextPosition, nextPosition);
+    this.setSelectionRange(nextPosition, nextPosition, this.selectionDirection);
   };
 
+  /**
+   *
+   * @param {string} value - the unmasked value to set
+   * @returns true if and only if the value has changed
+   */
   #setValue = (value) => {
+    const prevValue = this.#unmaskedValue;
     const maxLength = parseInt(this.maxLength, 10);
     if (typeof value !== "string") {
       this.#unmaskedValue = "";
@@ -671,6 +862,7 @@ class MaskedInput extends HTMLInputElement {
     } else {
       this.#unmaskedValue = value;
     }
+    return this.#unmaskedValue !== prevValue;
   };
 
   #getNativeInput = () => {
@@ -679,7 +871,20 @@ class MaskedInput extends HTMLInputElement {
     nativeInput.value = this.#unmaskedValue;
 
     for (const { name, value } of this.attributes) {
-      if (["type", "value", "is"].includes(name)) {
+      if (
+        [
+          "type",
+          "value",
+          "is",
+          "class",
+          "style",
+          "mask-pattern",
+          "mask-replacement-character",
+          "show-overflowed-mask",
+          "show-empty-mask",
+          "show-replacement-characters",
+        ].includes(name)
+      ) {
         continue;
       }
       nativeInput.setAttribute(name, value);
@@ -733,7 +938,7 @@ class MaskedInput extends HTMLInputElement {
       case "insertText": {
         event.preventDefault();
         if (
-          /apple/i.test(navigator.vendor) &&
+          /apple/i.test(globalThis.navigator?.vendor) &&
           inputType === "insertText" &&
           this.selectionStart !== this.selectionEnd &&
           this.#toGraphemes(data).length === 2
@@ -744,7 +949,11 @@ class MaskedInput extends HTMLInputElement {
           const originalPosition = this.#getPositionOfCharAtIndex(
             selectedCharIndexes.at(0)
           ).end;
-          this.setSelectionRange(originalPosition, originalPosition);
+          this.setSelectionRange(
+            originalPosition,
+            originalPosition,
+            this.selectionDirection
+          );
           this.#insertTranspose(data);
         } else {
           this.#insertText(data);
@@ -810,16 +1019,24 @@ class MaskedInput extends HTMLInputElement {
     }
 
     // dispatch InputEvent for other listeners, since preventDefault stopped the native dispatch
-    setTimeout(() => {
+    queueMicrotask(() => {
       this.dispatchEvent(
-        new InputEvent("input", { inputType, data, isComposing })
+        new InputEvent("input", {
+          inputType,
+          data,
+          isComposing,
+          bubbles: true,
+          cancelable: false,
+        })
       );
-    }, 0);
+    });
   };
 
   #handleAutofill = (event) => {
-    // ignore history input events (undo/redo)
-    if (!/^history[A-Z]/.test(event.inputType) && event.isTrusted) {
+    if (
+      [undefined, "insertReplacementText"].includes(event.inputType) &&
+      event.isTrusted
+    ) {
       this.#setValue(super.value);
       this.#applyMask();
     }
@@ -835,7 +1052,7 @@ class MaskedInput extends HTMLInputElement {
 
     event.clipboardData.setData(
       "text/plain",
-      this.#valueCharacters
+      this.#characterSlots
         .filter((_, idx) => selectedCharIndexes.includes(idx))
         .map(({ displayChar }) => displayChar)
         .join("")
@@ -848,12 +1065,17 @@ class MaskedInput extends HTMLInputElement {
   };
 
   #handleDragData = (event) => {
+    if (this.#internalType === "password") {
+      event.preventDefault();
+      return;
+    }
+
     event.dataTransfer.clearData();
     const { selectedCharIndexes } = this.#getSelectionPosition();
 
     event.dataTransfer.setData(
       "text/plain",
-      this.#valueCharacters
+      this.#characterSlots
         .filter((_, idx) => selectedCharIndexes.includes(idx))
         .map(({ displayChar }) => displayChar)
         .join("")
@@ -889,7 +1111,10 @@ class MaskedInput extends HTMLInputElement {
       case "ArrowRight": {
         let nextCharEnd =
           charIndexAfterSelection != null
-            ? this.#getPositionOfCharAtIndex(charIndexAfterSelection).end
+            ? Math.min(
+                this.#getEndPosition(),
+                this.#getPositionOfCharAtIndex(charIndexAfterSelection).end
+              )
             : null;
 
         if (this.selectionStart !== this.selectionEnd) {
@@ -988,8 +1213,16 @@ class MaskedInput extends HTMLInputElement {
         }
         break;
       }
-      case "End":
       case "ArrowDown": {
+        if (this.#internalType === "number") {
+          this.stepDown();
+          nextStart = this.#getEndPosition();
+          nextEnd = this.#getEndPosition();
+          break;
+        }
+        // else fall through and do the same thing as "End"
+      }
+      case "End": {
         nextEnd = this.#getEndPosition();
 
         if (event.shiftKey) {
@@ -1008,10 +1241,18 @@ class MaskedInput extends HTMLInputElement {
         nextDirection = nextStart === nextEnd ? "none" : "forward";
         break;
       }
-      case "Home":
       case "ArrowUp": {
+        if (this.#internalType === "number") {
+          this.stepUp();
+          nextStart = this.#getEndPosition();
+          nextEnd = this.#getEndPosition();
+          break;
+        }
+        // else fall through and do the same thing as "Home"
+      }
+      case "Home": {
         const nextPosition = this.#getMaskVisibility()
-          ? this.#getPositionOfCharAtIndex(this.#valueCharacters.at(0)).start
+          ? this.#getPositionOfCharAtIndex(this.#characterSlots.at(0)).start
           : 0;
         nextStart = nextPosition;
 
@@ -1036,76 +1277,81 @@ class MaskedInput extends HTMLInputElement {
     this.setSelectionRange(nextStart, nextEnd, nextDirection);
   };
 
-  #getNearestValueEdge = () => {
-    const {
-      charIndexBeforeSelection,
-      charIndexAfterSelection,
-      selectedCharIndexes,
-    } = this.#getSelectionPosition();
-
-    if (selectedCharIndexes.length > 0) {
-      return this.selectionDirection === "backward"
-        ? this.#getPositionOfCharAtIndex(selectedCharIndexes.at(0)).start
-        : this.#getPositionOfCharAtIndex(selectedCharIndexes.at(-1)).end;
-    } else if (
-      charIndexBeforeSelection != null &&
-      charIndexAfterSelection != null
-    ) {
-      const leadingEdge = this.#getPositionOfCharAtIndex(
-        charIndexBeforeSelection
-      ).end;
-      const trailingEdge = this.#getPositionOfCharAtIndex(
-        charIndexAfterSelection
-      ).start;
-      return this.selectionStart - leadingEdge >
-        trailingEdge - this.selectionEnd
-        ? trailingEdge
-        : leadingEdge;
-    } else if (charIndexBeforeSelection == null) {
-      return this.#getPositionOfCharAtIndex(charIndexAfterSelection).start;
-    } else if (charIndexAfterSelection == null) {
-      return this.#getPositionOfCharAtIndex(charIndexBeforeSelection).end;
+  #setSelectionToValidPositions = () => {
+    if (this.#replacementSlots === 0) {
+      return this.setSelectionRange(0, 0, this.selectionDirection);
     }
-  };
-
-  #setCursorToNearestValueEdge = () => {
-    const {
-      charIndexBeforeSelection,
-      charIndexAfterSelection,
-      selectedCharIndexes,
-    } = this.#getSelectionPosition();
-
-    // ignore selections; do not "shrink-wrap" selections after the user has made them
-    if (selectedCharIndexes.length === 0) {
-      const nextPosition = this.#getNearestValueEdge();
-      this.setSelectionRange(
-        nextPosition,
-        nextPosition,
+    if (this.#valueCharacterCount === 0) {
+      const startPosition = this.#getPositionOfCharAtIndex(0).start;
+      return this.setSelectionRange(
+        startPosition,
+        startPosition,
         this.selectionDirection
       );
+    }
+
+    // get positions of all non-null characters
+    const validPositions = this.#characterSlots
+      .slice(0, this.#valueCharacterCount)
+      .flatMap((_, idx) => {
+        const { start, end } = this.#getPositionOfCharAtIndex(idx);
+        return [start, end];
+      });
+
+    // if the next slot is a replacement slot that is not filled, get its start position
+    if (this.#characterSlots.length > this.#valueCharacterCount) {
+      validPositions.push(
+        this.#getPositionOfCharAtIndex(this.#valueCharacterCount).start
+      );
+    }
+
+    const start = validPositions.reduce((prev, curr) =>
+      Math.abs(curr - this.selectionStart) <
+      Math.abs(prev - this.selectionStart)
+        ? curr
+        : prev
+    );
+    const end = validPositions.reduce((prev, curr) =>
+      Math.abs(curr - this.selectionEnd) < Math.abs(prev - this.selectionEnd)
+        ? curr
+        : prev
+    );
+
+    this.setSelectionRange(start, end, this.selectionDirection);
+  };
+
+  #defaultBehaviors = new Map();
+  #setDefaultFor = (name, defaultFn) => {
+    const handler = (event) => {
+      // wait to run the default function until after the event has finished bubbling
+      // in case the author calls preventDefault() later in the bubbling phase
+      queueMicrotask(() => {
+        if (!event.defaultPrevented) {
+          defaultFn(event);
+        }
+      });
+    };
+    if (!this.#defaultBehaviors.has(name)) {
+      this.addEventListener(name, handler);
+      this.#defaultBehaviors.set(name, handler);
     }
   };
 
   connectedCallback() {
-    this.addEventListener("beforeinput", this.#handleInput);
-    this.addEventListener("input", this.#handleAutofill);
-    this.addEventListener("copy", this.#updateClipboard);
-    this.addEventListener("cut", this.#handleCut);
-    this.addEventListener("dragstart", this.#handleDragData);
-    this.addEventListener("focus", this.#setCursorToNearestValueEdge);
-    this.addEventListener("mouseup", this.#setCursorToNearestValueEdge);
-    this.addEventListener("keydown", this.#handleKeyboardNavigation);
+    this.#setDefaultFor("beforeinput", this.#handleInput);
+    this.#setDefaultFor("input", this.#handleAutofill);
+    this.#setDefaultFor("copy", this.#updateClipboard);
+    this.#setDefaultFor("cut", this.#handleCut);
+    this.#setDefaultFor("dragstart", this.#handleDragData);
+    this.#setDefaultFor("focus", this.#setSelectionToValidPositions);
+    this.#setDefaultFor("mouseup", this.#setSelectionToValidPositions);
+    this.#setDefaultFor("keydown", this.#handleKeyboardNavigation);
   }
 
   disconnectedCallback() {
-    this.removeEventListener("beforeinput", this.#handleInput);
-    this.removeEventListener("input", this.#handleAutofill);
-    this.removeEventListener("copy", this.#updateClipboard);
-    this.removeEventListener("cut", this.#handleCut);
-    this.removeEventListener("dragstart", this.#handleDragData);
-    this.removeEventListener("focus", this.#setCursorToNearestValueEdge);
-    this.removeEventListener("mouseup", this.#setCursorToNearestValueEdge);
-    this.removeEventListener("keydown", this.#handleKeyboardNavigation);
+    for (const [name, handler] of this.#defaultBehaviors.entries()) {
+      this.removeEventListener(name, handler);
+    }
   }
 }
 
@@ -1129,7 +1375,7 @@ customElements.define("masked-input", MaskedInput, { extends: "input" });
  * 🔳 7. handle min/max length attr
  * 🔳 8. handle number/tel/email/url types
  * ✅ 9. handle copy/cut events
- * 🔳 10. handle arrow key and home/end key presses (navigating & selecting)
- * 11. handle dragging selected text (only have value characters be in dataTransfer, not mask characters)
+ * ✅ 10. handle arrow key and home/end key presses (navigating & selecting)
+ * ✅ 11. handle dragging selected text (only have value characters be in dataTransfer, not mask characters)
  * 12. handle RTL inputs
  */

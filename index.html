@@ -1,20 +1,30 @@
 <!DOCTYPE html>
-<html>
+<html lang="en-US">
   <head>
     <meta charset="utf-8" />
     <title>Masked Input tests</title>
     <meta name="timeout" content="long" />
     <meta name="color-scheme" content="dark light" />
     <!-- polyfill for safari -->
-    <script src="/masked-input/assets/polyfill/custom-elements.js"></script>
+    <script src="assets/polyfill/custom-elements.js"></script>
     <!-- Web Platform Tests (WPT) testing suite -->
-    <script src="/masked-input/assets/wpt/testharness.js"></script>
-    <script src="/masked-input/assets/wpt/testharnessreport.js"></script>
-    <script src="/masked-input/assets/masked-input.js"></script>
+    <script src="assets/wpt/testharness.js"></script>
+    <script src="assets/wpt/testharnessreport.js"></script>
+    <script src="assets/masked-input.js"></script>
   </head>
   <body>
-    <input type="password" is="masked-input" mask-pattern="___ ___ ___" />
-    <input type="number" is="masked-input" mask-pattern="___ ___ ___" />
+    <input
+      id="Pwd"
+      type="password"
+      is="masked-input"
+      mask-pattern="___ ___ ___"
+    />
+    <input
+      id="Nmbr"
+      type="number"
+      is="masked-input"
+      mask-pattern="___ ___ ___"
+    />
     <script>
       function createMaskedInput({ props = {}, attrs = {} }) {
         const maskedInput = document.createElement("input", {
@@ -34,12 +44,26 @@
 
         return maskedInput;
       }
+      function catchWindowError(callback) {
+        let error;
+        const listener = (event) => {
+          event.preventDefault();
+          error = event.error;
+        };
+        window.addEventListener("error", listener);
+        try {
+          callback();
+        } finally {
+          window.removeEventListener("error", listener);
+        }
+        return error;
+      }
+      function waitOneTick() {
+        return new Promise((resolve) => {
+          setTimeout(resolve, 0);
+        });
+      }
 
-      /**
-       * 1. masked -> unmasked for delete events, unmasked -> masked for insert events
-       * 2. no change in mask visibility
-       * 3. beginning, middle, and end positions
-       */
       const testCases = [
         {
           inputTypes: [
@@ -53,8 +77,6 @@
             value: "1234",
             selectionStart: 0,
             selectionEnd: 0,
-            attributes: {}, // 'show-empty-mask' etc.
-            data: null,
           },
           variants: [
             {
@@ -63,6 +85,7 @@
               output: {
                 value: "1234",
                 maskedValue: "1234",
+                passwordMaskedValue: "••••",
                 selectionStart: 0,
                 selectionEnd: 0,
               },
@@ -76,6 +99,7 @@
               output: {
                 value: "123",
                 maskedValue: "-1-2-3-",
+                passwordMaskedValue: "-•-•-•-",
                 selectionStart: 6,
                 selectionEnd: 6,
               },
@@ -90,6 +114,7 @@
               output: {
                 value: "1235",
                 maskedValue: "1235",
+                passwordMaskedValue: "••••",
                 selectionStart: 3,
                 selectionEnd: 3,
               },
@@ -104,6 +129,7 @@
               output: {
                 value: "13",
                 maskedValue: "-1-3- -",
+                passwordMaskedValue: "-•-•- -",
                 selectionStart: 3,
                 selectionEnd: 3,
               },
@@ -122,6 +148,7 @@
               output: {
                 value: "13",
                 maskedValue: "-1-3-_-",
+                passwordMaskedValue: "-•-•-_-",
                 selectionStart: 3,
                 selectionEnd: 3,
               },
@@ -137,6 +164,7 @@
               output: {
                 value: "",
                 maskedValue: "",
+                passwordMaskedValue: "",
                 selectionStart: 0,
                 selectionEnd: 0,
               },
@@ -152,6 +180,7 @@
               output: {
                 value: "",
                 maskedValue: "",
+                passwordMaskedValue: "",
                 selectionStart: 0,
                 selectionEnd: 0,
               },
@@ -167,6 +196,7 @@
               output: {
                 value: "1",
                 maskedValue: "-1- - -",
+                passwordMaskedValue: "-•- - -",
                 selectionStart: 3,
                 selectionEnd: 3,
               },
@@ -182,6 +212,7 @@
               output: {
                 value: "1",
                 maskedValue: "-1- - -",
+                passwordMaskedValue: "-•- - -",
                 selectionStart: 3,
                 selectionEnd: 3,
               },
@@ -200,6 +231,25 @@
               output: {
                 value: "",
                 maskedValue: "- - - -",
+                passwordMaskedValue: "- - - -",
+                selectionStart: 1,
+                selectionEnd: 1,
+              },
+            },
+            {
+              description: "delete grapheme cluster",
+              input: {
+                value: "🇯🇵🇺🇸",
+                maskPattern: "-__-",
+                selectionStart: 5,
+                selectionEnd: 5,
+                passwordSelectionStart: 2,
+                passwordSelectionEnd: 2,
+              },
+              output: {
+                value: "🇺🇸",
+                maskedValue: "-🇺🇸 -",
+                passwordMaskedValue: "-• -",
                 selectionStart: 1,
                 selectionEnd: 1,
               },
@@ -221,6 +271,7 @@
               output: {
                 value: "234",
                 maskedValue: "-2-3-4-",
+                passwordMaskedValue: "-•-•-•-",
                 selectionStart: 1,
                 selectionEnd: 1,
               },
@@ -234,6 +285,7 @@
               output: {
                 value: "1234",
                 maskedValue: "1234",
+                passwordMaskedValue: "••••",
                 selectionStart: 4,
                 selectionEnd: 4,
               },
@@ -248,6 +300,7 @@
               output: {
                 value: "1234",
                 maskedValue: "1234",
+                passwordMaskedValue: "••••",
                 selectionStart: 4,
                 selectionEnd: 4,
               },
@@ -263,6 +316,7 @@
               output: {
                 value: "13",
                 maskedValue: "-1-3- -",
+                passwordMaskedValue: "-•-•- -",
                 selectionStart: 3,
                 selectionEnd: 3,
               },
@@ -281,6 +335,7 @@
               output: {
                 value: "13",
                 maskedValue: "-1-3-_-",
+                passwordMaskedValue: "-•-•-_-",
                 selectionStart: 3,
                 selectionEnd: 3,
               },
@@ -295,6 +350,7 @@
               output: {
                 value: "",
                 maskedValue: "",
+                passwordMaskedValue: "",
                 selectionStart: 0,
                 selectionEnd: 0,
               },
@@ -309,6 +365,7 @@
               output: {
                 value: "",
                 maskedValue: "",
+                passwordMaskedValue: "",
                 selectionStart: 0,
                 selectionEnd: 0,
               },
@@ -323,6 +380,7 @@
               output: {
                 value: "1",
                 maskedValue: "-1- - -",
+                passwordMaskedValue: "-•- - -",
                 selectionStart: 2,
                 selectionEnd: 2,
               },
@@ -338,6 +396,7 @@
               output: {
                 value: "1",
                 maskedValue: "-1- - -",
+                passwordMaskedValue: "-•- - -",
                 selectionStart: 3,
                 selectionEnd: 3,
               },
@@ -355,8 +414,29 @@
               output: {
                 value: "",
                 maskedValue: "- - - -",
+                passwordMaskedValue: "- - - -",
                 selectionStart: 1,
                 selectionEnd: 1,
+              },
+            },
+            {
+              description: "delete grapheme cluster",
+              input: {
+                value: "🇯🇵🇺🇸",
+                maskPattern: "-__-",
+                selectionStart: 5,
+                selectionEnd: 5,
+                passwordSelectionStart: 2,
+                passwordSelectionEnd: 2,
+              },
+              output: {
+                value: "🇯🇵",
+                maskedValue: "-🇯🇵 -",
+                passwordMaskedValue: "-• -",
+                selectionStart: 5,
+                selectionEnd: 5,
+                passwordSelectionStart: 2,
+                passwordSelectionEnd: 2,
               },
             },
           ],
@@ -379,6 +459,7 @@
               output: {
                 value: "12 34",
                 maskedValue: "-1-2- -3-4-",
+                passwordMaskedValue: "-•-•-•-•-•-",
                 selectionStart: 1,
                 selectionEnd: 1,
               },
@@ -392,6 +473,7 @@
               output: {
                 value: "34",
                 maskedValue: "-3-4- - - -",
+                passwordMaskedValue: "-•-•- - - -",
                 selectionStart: 1,
                 selectionEnd: 1,
               },
@@ -402,6 +484,7 @@
               output: {
                 value: "12 ",
                 maskedValue: "-1-2- - - -",
+                passwordMaskedValue: "-•-•-•- - -",
                 selectionStart: 7,
                 selectionEnd: 7,
               },
@@ -415,6 +498,7 @@
               output: {
                 value: "12 4",
                 maskedValue: "-1-2- -4- -",
+                passwordMaskedValue: "-•-•-•-•- -",
                 selectionStart: 7,
                 selectionEnd: 7,
               },
@@ -429,6 +513,7 @@
               output: {
                 value: "",
                 maskedValue: "",
+                passwordMaskedValue: "",
                 selectionStart: 0,
                 selectionEnd: 0,
               },
@@ -444,6 +529,7 @@
               output: {
                 value: " ",
                 maskedValue: "- -",
+                passwordMaskedValue: "-•-",
                 selectionStart: 2,
                 selectionEnd: 2,
               },
@@ -457,111 +543,25 @@
               output: {
                 value: "14",
                 maskedValue: "-1-4- - - -",
+                passwordMaskedValue: "-•-•- - - -",
                 selectionStart: 3,
                 selectionEnd: 3,
               },
             },
-          ],
-        },
-        {
-          inputTypes: ["deleteWordForward"],
-          baseInput: {
-            maskPattern: "-_-_-_-_-_-",
-            value: "12 34",
-            selectionStart: 4,
-            selectionEnd: 4,
-          },
-          variants: [
             {
-              description: "noop: caret at end of input",
+              description: "delete grapheme cluster",
               input: {
-                selectionStart: 10,
-                selectionEnd: 10,
-              },
-              output: {
-                value: "12 34",
-                maskedValue: "-1-2- -3-4-",
-                selectionStart: 10,
-                selectionEnd: 10,
-              },
-            },
-            {
-              description: "delete first word and not the space after it",
-              input: {
-                selectionStart: 1,
-                selectionEnd: 1,
-              },
-              output: {
-                value: " 34",
-                maskedValue: "- -3-4- - -",
-                selectionStart: 1,
-                selectionEnd: 1,
-              },
-            },
-            {
-              description: "delete second word and space before",
-              input: {},
-              output: {
-                value: "12",
-                maskedValue: "-1-2- - - -",
-                selectionStart: 4,
-                selectionEnd: 4,
-              },
-            },
-            {
-              description: "delete partial word",
-              input: {
-                selectionStart: 8,
-                selectionEnd: 8,
-              },
-              output: {
-                value: "12 3",
-                maskedValue: "-1-2- -3- -",
-                selectionStart: 8,
-                selectionEnd: 8,
-              },
-            },
-            {
-              description:
-                "delete the entire value (a single word following a space)",
-              input: {
-                value: " 12",
-                selectionStart: 1,
-                selectionEnd: 1,
-              },
-              output: {
-                value: "",
-                maskedValue: "",
-                selectionStart: 0,
-                selectionEnd: 0,
-              },
-            },
-            {
-              description: "umasked to masked",
-              input: {
-                value: "234 ",
-                maskPattern: "-_-",
-                selectionStart: 0,
-                selectionEnd: 0,
-              },
-              output: {
-                value: " ",
-                maskedValue: "- -",
-                selectionStart: 1,
-                selectionEnd: 1,
-              },
-            },
-            {
-              description: "delete selection (ignores word boundaries)",
-              input: {
-                selectionStart: 3,
-                selectionEnd: 8,
-              },
-              output: {
-                value: "14",
-                maskedValue: "-1-4- - - -",
+                value: "は た",
+                maskPattern: "-___-",
                 selectionStart: 3,
                 selectionEnd: 3,
+              },
+              output: {
+                value: "た",
+                maskedValue: "-た  -",
+                passwordMaskedValue: "-•  -",
+                selectionStart: 1,
+                selectionEnd: 1,
               },
             },
           ],
@@ -584,6 +584,7 @@
               output: {
                 value: "12 34",
                 maskedValue: "-1-2- -3-4-",
+                passwordMaskedValue: "-•-•-•-•-•-",
                 selectionStart: 10,
                 selectionEnd: 10,
               },
@@ -597,6 +598,7 @@
               output: {
                 value: "12",
                 maskedValue: "-1-2- - - -",
+                passwordMaskedValue: "-•-•- - - -",
                 selectionStart: 4,
                 selectionEnd: 4,
               },
@@ -607,6 +609,7 @@
               output: {
                 value: " 34",
                 maskedValue: "- -3-4- - -",
+                passwordMaskedValue: "-•-•-•- - -",
                 selectionStart: 1,
                 selectionEnd: 1,
               },
@@ -620,6 +623,7 @@
               output: {
                 value: "12 3",
                 maskedValue: "-1-2- -3- -",
+                passwordMaskedValue: "-•-•-•-•- -",
                 selectionStart: 8,
                 selectionEnd: 8,
               },
@@ -634,6 +638,7 @@
               output: {
                 value: "",
                 maskedValue: "",
+                passwordMaskedValue: "",
                 selectionStart: 0,
                 selectionEnd: 0,
               },
@@ -649,6 +654,7 @@
               output: {
                 value: " ",
                 maskedValue: "- -",
+                passwordMaskedValue: "-•-",
                 selectionStart: 1,
                 selectionEnd: 1,
               },
@@ -662,8 +668,25 @@
               output: {
                 value: "14",
                 maskedValue: "-1-4- - - -",
+                passwordMaskedValue: "-•-•- - - -",
                 selectionStart: 3,
                 selectionEnd: 3,
+              },
+            },
+            {
+              description: "delete grapheme cluster",
+              input: {
+                value: "は た",
+                maskPattern: "-___-",
+                selectionStart: 2,
+                selectionEnd: 2,
+              },
+              output: {
+                value: "は",
+                maskedValue: "-は  -",
+                passwordMaskedValue: "-•  -",
+                selectionStart: 2,
+                selectionEnd: 2,
               },
             },
           ],
@@ -683,6 +706,7 @@
               output: {
                 value: "",
                 maskedValue: "",
+                passwordMaskedValue: "",
                 selectionStart: 0,
                 selectionEnd: 0,
               },
@@ -696,6 +720,7 @@
               output: {
                 value: "1234",
                 maskedValue: "-1-2-3-4-",
+                passwordMaskedValue: "-•-•-•-•-",
                 selectionStart: 8,
                 selectionEnd: 8,
               },
@@ -709,6 +734,7 @@
               output: {
                 value: "1",
                 maskedValue: "-1- - - -",
+                passwordMaskedValue: "-•- - - -",
                 selectionStart: 2,
                 selectionEnd: 2,
               },
@@ -722,6 +748,7 @@
               output: {
                 value: "1",
                 maskedValue: "-1- - - -",
+                passwordMaskedValue: "-•- - - -",
                 selectionStart: 3,
                 selectionEnd: 3,
               },
@@ -737,8 +764,29 @@
               output: {
                 value: "1",
                 maskedValue: "-1-",
+                passwordMaskedValue: "-•-",
                 selectionStart: 2,
                 selectionEnd: 2,
+              },
+            },
+            {
+              description: "delete grapheme cluster",
+              input: {
+                value: "🇯🇵🇺🇸",
+                maskPattern: "-__-",
+                selectionStart: 5,
+                selectionEnd: 5,
+                passwordSelectionStart: 2,
+                passwordSelectionEnd: 2,
+              },
+              output: {
+                value: "🇯🇵",
+                maskedValue: "-🇯🇵 -",
+                passwordMaskedValue: "-• -",
+                selectionStart: 5,
+                selectionEnd: 5,
+                passwordSelectionStart: 2,
+                passwordSelectionEnd: 2,
               },
             },
           ],
@@ -761,6 +809,7 @@
               output: {
                 value: "",
                 maskedValue: "",
+                passwordMaskedValue: "",
                 selectionStart: 0,
                 selectionEnd: 0,
               },
@@ -771,6 +820,7 @@
               output: {
                 value: "1234",
                 maskedValue: "-1-2-3-4-",
+                passwordMaskedValue: "-•-•-•-•-",
                 selectionStart: 1,
                 selectionEnd: 1,
               },
@@ -784,6 +834,7 @@
               output: {
                 value: "234",
                 maskedValue: "-2-3-4- -",
+                passwordMaskedValue: "-•-•-•- -",
                 selectionStart: 1,
                 selectionEnd: 1,
               },
@@ -797,6 +848,7 @@
               output: {
                 value: "234",
                 maskedValue: "-2-3-4- -",
+                passwordMaskedValue: "-•-•-•- -",
                 selectionStart: 1,
                 selectionEnd: 1,
               },
@@ -812,6 +864,25 @@
               output: {
                 value: "2",
                 maskedValue: "-2-",
+                passwordMaskedValue: "-•-",
+                selectionStart: 1,
+                selectionEnd: 1,
+              },
+            },
+            {
+              description: "delete grapheme cluster",
+              input: {
+                value: "🇯🇵🇺🇸",
+                maskPattern: "-__-",
+                selectionStart: 5,
+                selectionEnd: 5,
+                passwordSelectionStart: 2,
+                passwordSelectionEnd: 2,
+              },
+              output: {
+                value: "🇺🇸",
+                maskedValue: "-🇺🇸 -",
+                passwordMaskedValue: "-• -",
                 selectionStart: 1,
                 selectionEnd: 1,
               },
@@ -836,6 +907,7 @@
               output: {
                 value: "",
                 maskedValue: "",
+                passwordMaskedValue: "",
                 selectionStart: 0,
                 selectionEnd: 0,
               },
@@ -846,6 +918,7 @@
               output: {
                 value: "",
                 maskedValue: "",
+                passwordMaskedValue: "",
                 selectionStart: 0,
                 selectionEnd: 0,
               },
@@ -859,6 +932,25 @@
               output: {
                 value: "",
                 maskedValue: "",
+                passwordMaskedValue: "",
+                selectionStart: 0,
+                selectionEnd: 0,
+              },
+            },
+            {
+              description: "delete grapheme cluster",
+              input: {
+                value: "🇯🇵🇺🇸",
+                maskPattern: "-__-",
+                selectionStart: 5,
+                selectionEnd: 5,
+                passwordSelectionStart: 2,
+                passwordSelectionEnd: 2,
+              },
+              output: {
+                value: "",
+                maskedValue: "",
+                passwordMaskedValue: "",
                 selectionStart: 0,
                 selectionEnd: 0,
               },
@@ -892,6 +984,7 @@
               output: {
                 value: "312",
                 maskedValue: "-3-1-2-",
+                passwordMaskedValue: "-•-•-•-",
                 selectionStart: 3,
                 selectionEnd: 3,
               },
@@ -902,6 +995,7 @@
               output: {
                 value: "123",
                 maskedValue: "-1-2-3-",
+                passwordMaskedValue: "-•-•-•-",
                 selectionStart: 6,
                 selectionEnd: 6,
               },
@@ -915,6 +1009,7 @@
               output: {
                 value: "132",
                 maskedValue: "-1-3-2-",
+                passwordMaskedValue: "-•-•-•-",
                 selectionStart: 4,
                 selectionEnd: 4,
               },
@@ -928,6 +1023,7 @@
               output: {
                 value: "132",
                 maskedValue: "-1-3-2-",
+                passwordMaskedValue: "-•-•-•-",
                 selectionStart: 5,
                 selectionEnd: 5,
               },
@@ -943,6 +1039,7 @@
               output: {
                 value: "3",
                 maskedValue: "-3- -",
+                passwordMaskedValue: "-•- -",
                 selectionStart: 3,
                 selectionEnd: 3,
               },
@@ -959,6 +1056,7 @@
               output: {
                 value: "13",
                 maskedValue: "13",
+                passwordMaskedValue: "••",
                 selectionStart: 2,
                 selectionEnd: 2,
               },
@@ -978,6 +1076,7 @@
               output: {
                 value: "13",
                 maskedValue: "-1-3",
+                passwordMaskedValue: "-•-•",
                 selectionStart: 4,
                 selectionEnd: 4,
               },
@@ -986,30 +1085,34 @@
               description: "unmasked to masked: insert grapheme cluster",
               input: {
                 value: "",
-                data: "🇺🇸",
+                data: "🇯🇵",
                 maskPattern: "-_-",
                 selectionStart: 0,
                 selectionEnd: 0,
               },
               output: {
-                value: "🇺🇸",
-                maskedValue: "-🇺🇸-",
+                value: "🇯🇵",
+                maskedValue: "-🇯🇵-",
+                passwordMaskedValue: "-•-",
                 selectionStart: 5,
                 selectionEnd: 5,
+                passwordSelectionStart: 2,
+                passwordSelectionEnd: 2,
               },
             },
             {
               description: "unmasked to masked: insert over selection",
               input: {
                 value: "1234",
-                data: "x",
+                data: "5",
                 maskPattern: "-_-_-_-",
                 selectionStart: 1,
                 selectionEnd: 3,
               },
               output: {
-                value: "1x4",
-                maskedValue: "-1-x-4-",
+                value: "154",
+                maskedValue: "-1-5-4-",
+                passwordMaskedValue: "-•-•-•-",
                 selectionStart: 5,
                 selectionEnd: 5,
               },
@@ -1028,10 +1131,12 @@
               input: {
                 selectionStart: 1,
                 selectionEnd: 1,
+                data: "-1",
               },
               output: {
                 value: "12",
                 maskedValue: "-1-2-",
+                passwordMaskedValue: "-•-•-",
                 selectionStart: 1,
                 selectionEnd: 1,
               },
@@ -1042,10 +1147,12 @@
               input: {
                 selectionStart: 2,
                 selectionEnd: 2,
+                data: "1-",
               },
               output: {
                 value: "21",
                 maskedValue: "-2-1-",
+                passwordMaskedValue: "-•-•-",
                 selectionStart: 4,
                 selectionEnd: 4,
               },
@@ -1056,10 +1163,12 @@
               input: {
                 selectionStart: 3,
                 selectionEnd: 3,
+                data: "-2",
               },
               output: {
                 value: "21",
                 maskedValue: "-2-1-",
+                passwordMaskedValue: "-•-•-",
                 selectionStart: 4,
                 selectionEnd: 4,
               },
@@ -1070,10 +1179,12 @@
               input: {
                 selectionStart: 4,
                 selectionEnd: 4,
+                data: "2-",
               },
               output: {
                 value: "21",
                 maskedValue: "-2-1-",
+                passwordMaskedValue: "-•-•-",
                 selectionStart: 4,
                 selectionEnd: 4,
               },
@@ -1085,10 +1196,12 @@
                 selectionStart: 2,
                 selectionEnd: 2,
                 maskPattern: "-__-",
+                data: "21",
               },
               output: {
                 value: "21",
                 maskedValue: "-21-",
+                passwordMaskedValue: "-••-",
                 selectionStart: 3,
                 selectionEnd: 3,
               },
@@ -1100,12 +1213,35 @@
                 selectionStart: 3,
                 selectionEnd: 3,
                 maskPattern: "-__-",
+                data: "2-",
               },
               output: {
                 value: "21",
                 maskedValue: "-21-",
+                passwordMaskedValue: "-••-",
                 selectionStart: 3,
                 selectionEnd: 3,
+              },
+            },
+            {
+              description: "transpose grapheme cluster",
+              input: {
+                value: "🇯🇵🇺🇸",
+                data: "🇺🇸-",
+                maskPattern: "-__-",
+                selectionStart: 5,
+                selectionEnd: 5,
+                passwordSelectionStart: 2,
+                passwordSelectionEnd: 2,
+              },
+              output: {
+                value: "🇺🇸🇯🇵",
+                maskedValue: "-🇺🇸🇯🇵-",
+                passwordMaskedValue: "-••-",
+                selectionStart: 9,
+                selectionEnd: 9,
+                passwordSelectionStart: 3,
+                passwordSelectionEnd: 3,
               },
             },
           ],
@@ -1139,9 +1275,37 @@
           "min",
           "max",
         ];
-        const props = [];
+        const props = [
+          "maskReplacementCharacter",
+          "maskPattern",
+          "maskedValue",
+          "value",
+          "valueAsNumber",
+          "type",
+        ];
+        const methods = [
+          "select",
+          "setRangeText",
+          "stepUp",
+          "stepDown",
+          "checkValidity",
+          "setAttribute",
+        ];
+        const events = [
+          "beforeinput",
+          "input", // autofill, etc.
+          "cut",
+          "copy",
+          "dragstart",
+          "focus",
+          "mouseup",
+          "keydown",
+          // 'undo',
+          // 'redo',
+        ];
+
         // configurations
-        test(() => {
+        promise_test(async () => {
           const m1 = createMaskedInput({
             props: {
               maskPattern: "<<_>>",
@@ -1153,7 +1317,7 @@
           });
           assert_equals(m1.maskedValue, "<< >>", "with props");
           m1.remove();
-
+          console.log("start");
           const m2 = createMaskedInput({
             attrs: {
               "show-empty-mask": "",
@@ -1161,6 +1325,8 @@
               value: "",
             },
           });
+          await waitOneTick();
+          console.log("end");
           assert_equals(m2.maskedValue, "<< >>", "with attributes");
           m2.remove();
 
@@ -1172,6 +1338,7 @@
               value: "",
             },
           });
+          await waitOneTick();
           assert_equals(
             m3.maskedValue,
             "<<_>>",
@@ -1188,6 +1355,7 @@
               value: "",
             },
           });
+          await waitOneTick();
           assert_equals(
             m4.maskedValue,
             "<<X>>",
@@ -1206,6 +1374,7 @@
               value: "",
             },
           });
+          await waitOneTick();
           assert_equals(
             m5.maskedValue,
             "<<X>>",
@@ -1222,6 +1391,7 @@
               value: "",
             },
           });
+          await waitOneTick();
           assert_equals(m6.maskedValue, "", "defaults to empty display value");
           m6.remove();
         }, "empty masked input in various configurations");
@@ -1230,26 +1400,30 @@
           assert_throws_dom(
             "NotSupportedError",
             () => {
-              createMaskedInput({ props: { type: "range" } });
+              const m = createMaskedInput({ props: { type: "range" } });
+              m.remove();
             },
-            "prop"
+            "invalid type (prop)"
           );
-          assert_throws_dom(
+          const attrError = catchWindowError(() => {
+            const m = createMaskedInput({ attrs: { type: "range" } });
+            m.remove();
+          });
+          assert_equals(
             "NotSupportedError",
-            () => {
-              createMaskedInput({ attrs: { type: "range" } });
-            },
-            "attr"
+            attrError?.name,
+            "invalid type (attr)"
           );
         }, "invalid configurations");
 
-        test(() => {
+        promise_test(async () => {
           const m1 = createMaskedInput({
             props: {
               maskPattern: "<<_>>",
               value: "1",
             },
           });
+          await waitOneTick();
           assert_equals(m1.maskedValue, "<<1>>", "with props");
           m1.remove();
 
@@ -1259,6 +1433,7 @@
               value: "2",
             },
           });
+          await waitOneTick();
           assert_equals(m2.maskedValue, "<<2>>", "with attributes");
           m2.remove();
 
@@ -1269,6 +1444,7 @@
               value: "3",
             },
           });
+          await waitOneTick();
           assert_equals(
             m3.maskedValue,
             "<3> {_}",
@@ -1284,6 +1460,7 @@
               value: "4",
             },
           });
+          await waitOneTick();
           assert_equals(
             m4.maskedValue,
             "<4> {X}",
@@ -1301,6 +1478,7 @@
               value: "5",
             },
           });
+          await waitOneTick();
           assert_equals(
             m5.maskedValue,
             "<5> {X}",
@@ -1309,13 +1487,14 @@
           m5.remove();
         }, "filled masked input in various configurations");
 
-        test(() => {
+        promise_test(async () => {
           const m1 = createMaskedInput({
             props: {
               maskPattern: "<<_>>",
               value: "123",
             },
           });
+          await waitOneTick();
           assert_equals(m1.maskedValue, "123", "with props");
           m1.remove();
 
@@ -1325,6 +1504,7 @@
               value: "123",
             },
           });
+          await waitOneTick();
           assert_equals(m2.maskedValue, "123", "with attributes");
           m2.remove();
 
@@ -1335,11 +1515,12 @@
               value: "123",
             },
           });
+          await waitOneTick();
           assert_equals(m3.maskedValue, "<1> {2}3", "showing overflowed mask");
           m3.remove();
         }, "overflowed masked input in various configurations");
 
-        test(() => {
+        promise_test(async () => {
           Object.entries({
             text: "text",
             url: "url",
@@ -1348,83 +1529,1828 @@
             email: "email",
             password: "text",
             number: "decimal",
-          }).forEach(([type, inputmode]) => {
+          }).forEach(async ([type, inputmode]) => {
             const m1 = createMaskedInput({ props: { type } });
+            await waitOneTick();
             assert_equals(m1.inputMode, inputmode, `[type: ${type}]`);
             m1.remove();
 
             const m2 = createMaskedInput({ attrs: { type } });
+            await waitOneTick();
             assert_equals(m2.inputMode, inputmode, `[type: ${type}]`);
             m2.remove();
           });
         }, "inputmode attribute by type");
 
-        // input tests
-        // for (const { inputTypes, baseInput, variants } of testCases) {
-        //   for (const { input, output, description = "" } of variants) {
-        //     for (const inputType of inputTypes) {
-        //       for (const selectionDirection of [
-        //         "forward",
-        //         "backward",
-        //         "none",
-        //       ]) {
-        //         for (const type of ["text", "url", "search", "tel", "email"]) {
-        //           promise_test(async () => {
-        //             const {
-        //               maskPattern,
-        //               maskReplacementCharacter,
-        //               value,
-        //               attributes = {},
-        //               selectionStart,
-        //               selectionEnd,
-        //               data = null,
-        //             } = { ...baseInput, ...input };
-        //             const maskedInput = createMaskedInput({
-        //               props: {
-        //                 type,
-        //                 maskPattern,
-        //                 maskReplacementCharacter,
-        //                 value,
-        //               },
-        //               attrs: attributes,
-        //             });
-        //             maskedInput.setSelectionRange(
-        //               selectionStart,
-        //               selectionEnd,
-        //               selectionDirection
-        //             );
-        //             maskedInput.dispatchEvent(
-        //               new InputEvent("beforeinput", { inputType, data })
-        //             );
+        promise_test(async () => {
+          const original = globalThis;
+          globalThis = { navigator: { vendor: "Apple" } };
+          const m = createMaskedInput({
+            props: {
+              maskPattern: "-_--_-",
+              value: "12",
+            },
+          });
+          await waitOneTick();
+          m.setSelectionRange(1, 3);
+          m.dispatchEvent(
+            new InputEvent("beforeinput", {
+              bubbles: true,
+              cancelable: true,
+              inputType: "insertText",
+              data: "-1",
+            })
+          );
+          await new Promise((resolve) => {
+            setTimeout(() => {
+              assert_equals(m.value, "21");
+              assert_equals(m.maskedValue, "-2--1-");
+              assert_equals(m.selectionStart, 5);
+              assert_equals(m.selectionEnd, 5);
+              resolve();
+            }, 0);
+          });
+          m.remove();
+          globalThis = original;
+        }, "Safari transpose event");
 
-        //             await new Promise((resolve) => {
-        //               // wait for event handlers to run, then assert output
-        //               setTimeout(() => {
-        //                 assert_equals(
-        //                   output.maskedValue,
-        //                   maskedInput.maskedValue
-        //                 );
-        //                 assert_equals(output.value, maskedInput.value);
-        //                 assert_equals(
-        //                   output.selectionStart,
-        //                   maskedInput.selectionStart
-        //                 );
-        //                 assert_equals(
-        //                   output.selectionEnd,
-        //                   maskedInput.selectionEnd
-        //                 );
+        promise_test(async () => {
+          const m = createMaskedInput({});
+          await waitOneTick();
+          m.addEventListener(
+            "beforeinput",
+            (e) => {
+              e.preventDefault();
+            },
+            { once: true }
+          );
+          m.setSelectionRange(0, 0);
+          m.dispatchEvent(
+            new InputEvent("beforeinput", {
+              inputType: "insertText",
+              data: "2",
+              bubbles: true,
+              cancelable: true,
+            })
+          );
+          return new Promise((resolve) => {
+            setTimeout(() => {
+              assert_equals(m.value, "", "beforeinput value");
+              m.remove();
+              resolve();
+            }, 0);
+          });
+        }, "beforeinput::preventDefault()");
 
-        //                 resolve();
-        //               }, 0);
-        //             });
+        promise_test(async () => {
+          const m = createMaskedInput({});
+          await waitOneTick();
+          m.addEventListener(
+            "beforeinput",
+            (e) => {
+              e.stopPropagation();
+            },
+            { once: true }
+          );
+          const unreachable = (e) => {
+            throw new AssertionError(
+              "event propagated after calling event.stopPropagation()"
+            );
+          };
+          window.addEventListener("beforeinput", unreachable, { once: true });
+          m.setSelectionRange(0, 0);
+          m.dispatchEvent(
+            new InputEvent("beforeinput", {
+              inputType: "insertText",
+              data: "2",
+              bubbles: true,
+              cancelable: true,
+            })
+          );
+          return new Promise((resolve) => {
+            setTimeout(() => {
+              assert_equals(m.value, "2", "beforeinput value");
+              m.remove();
+              window.removeEventListener("beforeinput", unreachable, {
+                once: true,
+              });
+              resolve();
+            }, 0);
+          });
+        }, "beforeinput::stopPropagation()");
 
-        //             maskedInput.remove();
-        //           }, type + ": " + inputType + ": selectionDirection: " + selectionDirection + ": " + description);
-        //         }
-        //       }
-        //     }
-        //   }
-        // }
+        promise_test(async () => {
+          const m = createMaskedInput({});
+          await waitOneTick();
+          m.addEventListener(
+            "beforeinput",
+            (e) => {
+              e.stopImmediatePropagation();
+            },
+            { once: true }
+          );
+          const unreachable = (e) => {
+            throw new AssertionError(
+              "event propagated after calling event.stopImmediatePropagation()"
+            );
+          };
+          m.addEventListener("beforeinput", unreachable, { once: true });
+          m.setSelectionRange(0, 0);
+          m.dispatchEvent(
+            new InputEvent("beforeinput", {
+              inputType: "insertText",
+              data: "2",
+              bubbles: true,
+              cancelable: true,
+            })
+          );
+          return new Promise((resolve) => {
+            setTimeout(() => {
+              assert_equals(m.value, "2", "default still works");
+              m.removeEventListener("beforeinput", unreachable, { once: true });
+              m.remove();
+              resolve();
+            }, 0);
+          });
+        }, "beforeinput::stopImmediatePropagation()");
+
+        promise_test(() => {
+          const m = createMaskedInput({});
+          m.addEventListener(
+            "input",
+            (e) => {
+              e.stopPropagation();
+            },
+            { once: true }
+          );
+          const unreachable = (e) => {
+            throw new AssertionError(
+              "event propagated after calling event.stopPropagation()"
+            );
+          };
+          window.addEventListener("input", unreachable, { once: true });
+          m.setSelectionRange(0, 0);
+          m.dispatchEvent(
+            new InputEvent("input", {
+              bubbles: true,
+              cancelable: false,
+            })
+          );
+          return new Promise((resolve) => {
+            setTimeout(() => {
+              m.remove();
+              window.removeEventListener("input", unreachable, {
+                once: true,
+              });
+              resolve();
+            }, 0);
+          });
+        }, "input::stopPropagation()");
+
+        promise_test(() => {
+          const m = createMaskedInput({});
+          m.addEventListener(
+            "input",
+            (e) => {
+              e.stopImmediatePropagation();
+            },
+            { once: true }
+          );
+          const unreachable = (e) => {
+            throw new AssertionError(
+              "event propagated after calling event.stopImmediatePropagation()"
+            );
+          };
+          m.addEventListener("input", unreachable, { once: true });
+          m.setSelectionRange(0, 0);
+          m.dispatchEvent(
+            new InputEvent("input", {
+              bubbles: true,
+              cancelable: false,
+            })
+          );
+          return new Promise((resolve) => {
+            setTimeout(() => {
+              m.removeEventListener("input", unreachable, { once: true });
+              m.remove();
+              resolve();
+            }, 0);
+          });
+        }, "input::stopImmediatePropagation()");
+
+        promise_test(() => {
+          let windowLevelEvent;
+          const m = createMaskedInput({});
+          m.addEventListener(
+            "cut",
+            (e) => {
+              e.preventDefault();
+            },
+            { once: true }
+          );
+          window.addEventListener(
+            "cut",
+            (e) => {
+              windowLevelEvent = e;
+            },
+            { once: true }
+          );
+
+          m.value = "test";
+          m.setSelectionRange(0, 4);
+
+          m.dispatchEvent(
+            new ClipboardEvent("cut", {
+              clipboardData: new DataTransfer(),
+              bubbles: true,
+              cancelable: true,
+            })
+          );
+          return new Promise((resolve) => {
+            setTimeout(() => {
+              assert_equals(m.value, "test", "cut value");
+              assert_equals(
+                windowLevelEvent.clipboardData?.getData("text"),
+                "",
+                "cut clipboard"
+              );
+              m.remove();
+              resolve();
+            }, 0);
+          });
+        }, "cut::preventDefault()");
+
+        promise_test(() => {
+          const m = createMaskedInput({});
+          m.addEventListener(
+            "cut",
+            (e) => {
+              e.stopPropagation();
+            },
+            { once: true }
+          );
+          const unreachable = (e) => {
+            throw new AssertionError(
+              "event propagated after calling event.stopPropagation()"
+            );
+          };
+          window.addEventListener("cut", unreachable, { once: true });
+
+          m.value = "test";
+          m.setSelectionRange(0, 4);
+
+          m.dispatchEvent(
+            new ClipboardEvent("cut", {
+              clipboardData: new DataTransfer(),
+              bubbles: true,
+              cancelable: true,
+            })
+          );
+          return new Promise((resolve) => {
+            setTimeout(() => {
+              assert_equals(m.value, "", "default still works");
+              window.removeEventListener("cut", unreachable, { once: true });
+              m.remove();
+              resolve();
+            }, 0);
+          });
+        }, "cut::stopPropagation()");
+
+        promise_test(() => {
+          const m = createMaskedInput({});
+          m.addEventListener(
+            "cut",
+            (e) => {
+              e.stopImmediatePropagation();
+            },
+            { once: true }
+          );
+          const unreachable = (e) => {
+            throw new AssertionError(
+              "event propagated after calling event.stopImmediatePropagation()"
+            );
+          };
+          m.addEventListener("cut", unreachable, { once: true });
+
+          m.value = "test";
+          m.setSelectionRange(0, 4);
+
+          m.dispatchEvent(
+            new ClipboardEvent("cut", {
+              clipboardData: new DataTransfer(),
+              bubbles: true,
+              cancelable: true,
+            })
+          );
+          return new Promise((resolve) => {
+            setTimeout(() => {
+              assert_equals(m.value, "", "default still works");
+              m.removeEventListener("cut", unreachable, { once: true });
+              m.remove();
+              resolve();
+            }, 0);
+          });
+        }, "cut::stopImmediatePropagation()");
+
+        promise_test(() => {
+          let windowLevelEvent;
+          const m = createMaskedInput({});
+          m.addEventListener(
+            "copy",
+            (e) => {
+              e.preventDefault();
+            },
+            { once: true }
+          );
+          window.addEventListener(
+            "copy",
+            (e) => {
+              windowLevelEvent = e;
+            },
+            { once: true }
+          );
+
+          m.value = "test";
+          m.setSelectionRange(0, 4);
+
+          m.dispatchEvent(
+            new ClipboardEvent("copy", {
+              clipboardData: new DataTransfer(),
+              bubbles: true,
+              cancelable: true,
+            })
+          );
+          return new Promise((resolve) => {
+            setTimeout(() => {
+              assert_equals(
+                windowLevelEvent.clipboardData?.getData("text"),
+                "",
+                "copy clipboard"
+              );
+              m.remove();
+              resolve();
+            }, 0);
+          });
+        }, "copy::preventDefault()");
+
+        promise_test(() => {
+          let windowLevelEvent;
+          const m = createMaskedInput({});
+          m.addEventListener(
+            "copy",
+            (e) => {
+              e.stopPropagation();
+            },
+            { once: true }
+          );
+          const unreachable = (e) => {
+            throw new AssertionError(
+              "event propagated after calling event.stopPropagation()"
+            );
+          };
+          window.addEventListener("copy", unreachable, { once: true });
+
+          m.value = "test";
+          m.setSelectionRange(0, 4);
+
+          m.dispatchEvent(
+            new ClipboardEvent("copy", {
+              clipboardData: new DataTransfer(),
+              bubbles: true,
+              cancelable: true,
+            })
+          );
+          return new Promise((resolve) => {
+            setTimeout(() => {
+              window.removeEventListener("copy", unreachable, { once: true });
+              m.remove();
+              resolve();
+            }, 0);
+          });
+        }, "copy::stopPropagation()");
+
+        promise_test(() => {
+          let windowLevelEvent;
+          const m = createMaskedInput({});
+          m.addEventListener(
+            "copy",
+            (e) => {
+              e.stopImmediatePropagation();
+            },
+            { once: true }
+          );
+          const unreachable = (e) => {
+            throw new AssertionError(
+              "event propagated after calling event.stopImmediatePropagation()"
+            );
+          };
+          m.addEventListener("copy", unreachable, { once: true });
+
+          m.value = "test";
+          m.setSelectionRange(0, 4);
+
+          m.dispatchEvent(
+            new ClipboardEvent("copy", {
+              clipboardData: new DataTransfer(),
+              bubbles: true,
+              cancelable: true,
+            })
+          );
+          return new Promise((resolve) => {
+            setTimeout(() => {
+              m.removeEventListener("copy", unreachable, { once: true });
+              m.remove();
+              resolve();
+            }, 0);
+          });
+        }, "copy::stopImmediatePropagation()");
+
+        promise_test(() => {
+          let windowLevelEvent;
+          const m = createMaskedInput({});
+          m.addEventListener(
+            "dragstart",
+            (e) => {
+              e.preventDefault();
+            },
+            { once: true }
+          );
+          window.addEventListener(
+            "dragstart",
+            (e) => {
+              windowLevelEvent = e;
+            },
+            { once: true }
+          );
+          m.value = "test";
+          m.setSelectionRange(0, 4);
+          m.dispatchEvent(
+            new DragEvent("dragstart", {
+              dataTransfer: new DataTransfer(),
+              bubbles: true,
+              cancelable: true,
+            })
+          );
+          return new Promise((resolve) => {
+            setTimeout(() => {
+              assert_equals(
+                windowLevelEvent.dataTransfer?.getData("text"),
+                "",
+                "drag data"
+              );
+              m.remove();
+              resolve();
+            }, 0);
+          });
+        }, "dragstart::preventDefault()");
+
+        promise_test(() => {
+          const m = createMaskedInput({});
+          m.addEventListener(
+            "dragstart",
+            (e) => {
+              e.stopPropagation();
+            },
+            { once: true }
+          );
+          const unreachable = (e) => {
+            throw new AssertionError(
+              "event propagated after calling event.stopPropagation()"
+            );
+          };
+          window.addEventListener("dragstart", unreachable, { once: true });
+
+          m.value = "test";
+          m.setSelectionRange(0, 4);
+          m.dispatchEvent(
+            new DragEvent("dragstart", {
+              dataTransfer: new DataTransfer(),
+              bubbles: true,
+              cancelable: true,
+            })
+          );
+          return new Promise((resolve) => {
+            setTimeout(() => {
+              window.removeEventListener("dragstart", unreachable, {
+                once: true,
+              });
+              m.remove();
+              resolve();
+            }, 0);
+          });
+        }, "dragstart::stopPropagation()");
+
+        promise_test(() => {
+          const m = createMaskedInput({});
+          m.addEventListener(
+            "dragstart",
+            (e) => {
+              e.stopImmediatePropagation();
+            },
+            { once: true }
+          );
+          const unreachable = (e) => {
+            throw new AssertionError(
+              "event propagated after calling event.stopImmediatePropagation()"
+            );
+          };
+          m.addEventListener("dragstart", unreachable, { once: true });
+
+          m.value = "test";
+          m.setSelectionRange(0, 4);
+          m.dispatchEvent(
+            new DragEvent("dragstart", {
+              dataTransfer: new DataTransfer(),
+              bubbles: true,
+              cancelable: true,
+            })
+          );
+          return new Promise((resolve) => {
+            setTimeout(() => {
+              m.removeEventListener("dragstart", unreachable, { once: true });
+              m.remove();
+              resolve();
+            }, 0);
+          });
+        }, "dragstart::stopImmediatePropagation()");
+
+        promise_test(() => {
+          const m = createMaskedInput({});
+          m.addEventListener(
+            "focus",
+            (e) => {
+              e.preventDefault();
+            },
+            { once: true }
+          );
+          m.maskPattern = "_ _ _";
+          m.value = "12";
+          m.setSelectionRange(5, 5);
+          m.dispatchEvent(
+            new FocusEvent("focus", {
+              bubbles: false,
+              cancelable: true,
+            })
+          );
+          return new Promise((resolve) => {
+            setTimeout(() => {
+              // focus should move the caret to the end of the masked value, 4 in this case
+              assert_equals(m.selectionStart, 5, "focus selectionStart");
+              assert_equals(m.selectionEnd, 5, "focus selectionEnd");
+              m.remove();
+              resolve();
+            }, 0);
+          });
+        }, "focus::preventDefault()");
+
+        promise_test(() => {
+          let windowLevelEvent;
+          const m = createMaskedInput({});
+          m.addEventListener(
+            "focus",
+            (e) => {
+              e.stopPropagation();
+            },
+            { once: true }
+          );
+          const unreachable = (e) => {
+            throw new AssertionError(
+              "event propagated after calling event.stopPropagation()"
+            );
+          };
+          window.addEventListener("focus", unreachable, { once: true });
+
+          m.maskPattern = "_ _ _";
+          m.value = "12";
+          m.setSelectionRange(5, 5);
+          m.dispatchEvent(
+            new FocusEvent("focus", {
+              bubbles: false,
+              cancelable: true,
+            })
+          );
+          return new Promise((resolve) => {
+            setTimeout(() => {
+              assert_equals(m.selectionStart, 4, "default still works");
+              window.removeEventListener("focus", unreachable, {
+                once: true,
+              });
+              m.remove();
+              resolve();
+            }, 0);
+          });
+        }, "focus::stopPropagation()");
+
+        promise_test(() => {
+          let windowLevelEvent;
+          const m = createMaskedInput({});
+          m.addEventListener(
+            "focus",
+            (e) => {
+              e.stopImmediatePropagation();
+            },
+            { once: true }
+          );
+          const unreachable = (e) => {
+            throw new AssertionError(
+              "event propagated after calling event.stopImmediatePropagation()"
+            );
+          };
+          m.addEventListener("focus", unreachable, { once: true });
+
+          m.maskPattern = "_ _ _";
+          m.value = "12";
+          m.setSelectionRange(5, 5);
+          m.dispatchEvent(
+            new FocusEvent("focus", {
+              bubbles: false,
+              cancelable: true,
+            })
+          );
+          return new Promise((resolve) => {
+            setTimeout(() => {
+              assert_equals(m.selectionStart, 4, "default still works");
+              m.removeEventListener("focus", unreachable, { once: true });
+              m.remove();
+              resolve();
+            }, 0);
+          });
+        }, "focus::stopImmediatePropagation()");
+
+        promise_test(() => {
+          const m = createMaskedInput({});
+          m.addEventListener(
+            "mouseup",
+            (e) => {
+              e.preventDefault();
+            },
+            { once: true }
+          );
+
+          m.maskPattern = "_ _ _";
+          m.value = "12";
+          m.setSelectionRange(5, 5);
+          m.dispatchEvent(
+            new MouseEvent("mouseup", {
+              bubbles: true,
+              cancelable: true,
+            })
+          );
+          return new Promise((resolve) => {
+            setTimeout(() => {
+              // mousedown should move the caret to the end of the masked value, 4 in this case
+              assert_equals(m.selectionStart, 5, "mouseup selectionStart");
+              assert_equals(m.selectionEnd, 5, "mouseup selectionEnd");
+              m.remove();
+              resolve();
+            }, 0);
+          });
+        }, "mouseup::preventDefault()");
+
+        promise_test(() => {
+          let windowLevelEvent;
+          const m = createMaskedInput({});
+          m.addEventListener(
+            "mouseup",
+            (e) => {
+              e.stopPropagation();
+            },
+            { once: true }
+          );
+          const unreachable = (e) => {
+            throw new AssertionError(
+              "event propagated after calling event.stopPropagation()"
+            );
+          };
+          window.addEventListener("mouseup", unreachable, { once: true });
+
+          m.maskPattern = "_ _ _";
+          m.value = "12";
+          m.setSelectionRange(5, 5);
+          m.dispatchEvent(
+            new MouseEvent("mouseup", {
+              bubbles: true,
+              cancelable: true,
+            })
+          );
+          return new Promise((resolve) => {
+            setTimeout(() => {
+              assert_equals(m.selectionStart, 4, "default still works");
+              window.removeEventListener("mouseup", unreachable, {
+                once: true,
+              });
+              m.remove();
+              resolve();
+            }, 0);
+          });
+        }, "mouseup::stopPropagation()");
+
+        promise_test(() => {
+          const m = createMaskedInput({});
+          m.addEventListener(
+            "mouseup",
+            (e) => {
+              e.stopImmediatePropagation();
+            },
+            { once: true }
+          );
+          const unreachable = (e) => {
+            throw new AssertionError(
+              "event propagated after calling event.stopImmediatePropagation()"
+            );
+          };
+          m.addEventListener("mouseup", unreachable, { once: true });
+
+          m.maskPattern = "_ _ _";
+          m.value = "12";
+          m.setSelectionRange(5, 5);
+          m.dispatchEvent(
+            new MouseEvent("mouseup", {
+              bubbles: true,
+              cancelable: true,
+            })
+          );
+          return new Promise((resolve) => {
+            setTimeout(() => {
+              assert_equals(m.selectionStart, 4, "default still works");
+              m.removeEventListener("mouseup", unreachable, { once: true });
+              m.remove();
+              resolve();
+            }, 0);
+          });
+        }, "mouseup::stopImmediatePropagation()");
+
+        promise_test(() => {
+          const m = createMaskedInput({});
+          m.addEventListener(
+            "keydown",
+            (e) => {
+              e.preventDefault();
+            },
+            { once: true }
+          );
+
+          m.maskPattern = "";
+          m.value = "123";
+          m.setSelectionRange(2, 2);
+          m.dispatchEvent(
+            new KeyboardEvent("keydown", {
+              key: "ArrowLeft",
+              bubbles: true,
+              cancelable: true,
+            })
+          );
+          return new Promise((resolve) => {
+            setTimeout(() => {
+              assert_equals(m.selectionStart, 2, "keydown selectionStart");
+              assert_equals(m.selectionEnd, 2, "keydown selectionEnd");
+              m.remove();
+              resolve();
+            }, 0);
+          });
+        }, "keydown::preventDefault()");
+
+        promise_test(() => {
+          const m = createMaskedInput({});
+          m.addEventListener(
+            "keydown",
+            (e) => {
+              e.stopPropagation();
+            },
+            { once: true }
+          );
+          const unreachable = (e) => {
+            throw new AssertionError(
+              "event propagated after calling event.stopPropagation()"
+            );
+          };
+          window.addEventListener("keydown", unreachable, { once: true });
+
+          m.maskPattern = "";
+          m.value = "123";
+          m.setSelectionRange(2, 2);
+          m.dispatchEvent(
+            new KeyboardEvent("keydown", {
+              key: "ArrowLeft",
+              bubbles: true,
+              cancelable: true,
+            })
+          );
+          return new Promise((resolve) => {
+            setTimeout(() => {
+              assert_equals(m.selectionStart, 1, "default still works");
+              window.removeEventListener("keydown", unreachable, {
+                once: true,
+              });
+              m.remove();
+              resolve();
+            }, 0);
+          });
+        }, "keydown::stopPropagation()");
+
+        promise_test(() => {
+          const m = createMaskedInput({});
+          m.addEventListener(
+            "keydown",
+            (e) => {
+              e.stopImmediatePropagation();
+            },
+            { once: true }
+          );
+          const unreachable = (e) => {
+            throw new AssertionError(
+              "event propagated after calling event.stopImmediatePropagation()"
+            );
+          };
+          m.addEventListener("keydown", unreachable, { once: true });
+
+          m.maskPattern = "";
+          m.value = "123";
+          m.setSelectionRange(2, 2);
+          m.dispatchEvent(
+            new KeyboardEvent("keydown", {
+              key: "ArrowLeft",
+              bubbles: true,
+              cancelable: true,
+            })
+          );
+          return new Promise((resolve) => {
+            setTimeout(() => {
+              assert_equals(m.selectionStart, 1, "default still works");
+              m.removeEventListener("keydown", unreachable, { once: true });
+              m.remove();
+              resolve();
+            }, 0);
+          });
+        }, "keydown::stopImmediatePropagation()");
+
+        promise_test(() => {
+          let clipboardData;
+          const logClipboardData = (event) => {
+            clipboardData = event.clipboardData?.getData("text");
+          };
+          const m = createMaskedInput({ type: "password" });
+          m.addEventListener("copy", logClipboardData, { once: true });
+
+          m.value = "test";
+          m.setSelectionRange(0, 4);
+
+          m.dispatchEvent(
+            new ClipboardEvent("copy", {
+              clipboardData: new DataTransfer(),
+              bubbles: true,
+              cancelable: true,
+            })
+          );
+          return new Promise((resolve) => {
+            setTimeout(() => {
+              assert_equals(clipboardData, "");
+              m.removeEventListener("copy", logClipboardData, { once: true });
+              m.remove();
+              resolve();
+            }, 0);
+          });
+        }, "copy should not work on password field");
+
+        promise_test(() => {
+          let clipboardData;
+          const logClipboardData = (event) => {
+            clipboardData = event.clipboardData?.getData("text");
+          };
+          const m = createMaskedInput({ type: "password" });
+          m.addEventListener("cut", logClipboardData, { once: true });
+
+          m.value = "test";
+          m.setSelectionRange(0, 4);
+
+          m.dispatchEvent(
+            new ClipboardEvent("cut", {
+              clipboardData: new DataTransfer(),
+              bubbles: true,
+              cancelable: true,
+            })
+          );
+          return new Promise((resolve) => {
+            setTimeout(() => {
+              assert_equals(clipboardData, "");
+              m.removeEventListener("cut", logClipboardData, { once: true });
+              m.remove();
+              resolve();
+            }, 0);
+          });
+        }, "cut should not update the clipboard on password field");
+
+        promise_test(() => {
+          const m = createMaskedInput({
+            props: { maskPattern: "(___) ___-____", value: "503" },
+          });
+          m.setSelectionRange(14, 14);
+          m.dispatchEvent(
+            new FocusEvent("focus", {
+              bubbles: false,
+              cancelable: true,
+            })
+          );
+
+          return new Promise((resolve) => {
+            setTimeout(() => {
+              assert_equals(m.selectionStart, 6, "selectionStart");
+              assert_equals(m.selectionEnd, 6, "selectionEnd");
+              m.remove();
+              resolve();
+            }, 0);
+          });
+        }, "focus should move the caret to the end of the masked value");
+
+        promise_test(() => {
+          const m = createMaskedInput({
+            props: { maskPattern: "(___) ___-____", value: "503" },
+          });
+          m.setSelectionRange(14, 14);
+          m.dispatchEvent(
+            new MouseEvent("mouseup", {
+              bubbles: true,
+              cancelable: true,
+            })
+          );
+
+          return new Promise((resolve) => {
+            setTimeout(() => {
+              assert_equals(m.selectionStart, 6, "selectionStart");
+              assert_equals(m.selectionEnd, 6, "selectionEnd");
+              resolve();
+              m.remove();
+            }, 0);
+          });
+        }, "mouseup should move the caret to the end of the masked value");
+
+        promise_test(async (t) => {
+          const m = createMaskedInput({
+            props: { maskPattern: "(___) ___-____", value: "503" },
+          });
+          t.add_cleanup(() => {
+            m.remove();
+          });
+
+          const left = () =>
+            m.dispatchEvent(
+              new KeyboardEvent("keydown", {
+                key: "ArrowLeft",
+                bubbles: true,
+                cancelable: true,
+              })
+            );
+          const right = () =>
+            m.dispatchEvent(
+              new KeyboardEvent("keydown", {
+                key: "ArrowRight",
+                bubbles: true,
+                cancelable: true,
+              })
+            );
+          const checkCaret = (expectedPosition, msg) => {
+            assert_equals(
+              m.selectionStart,
+              expectedPosition,
+              msg + "selectionStart"
+            );
+            assert_equals(
+              m.selectionEnd,
+              expectedPosition,
+              msg + "selectionEnd"
+            );
+          };
+
+          // not navigating past mask characters
+          m.setSelectionRange(4, 4);
+          left();
+          await waitOneTick();
+          checkCaret(3, "not navigating past mask characters (left)");
+          right();
+          await waitOneTick();
+          checkCaret(4, "not navigating past mask characters (right)");
+
+          // navigate past mask characters
+          m.setSelectionRange(4, 4);
+          right();
+          await waitOneTick();
+          checkCaret(6);
+          left();
+          await waitOneTick();
+          checkCaret(3);
+
+          // navigate left from beginning of mask
+          m.setSelectionRange(1, 1);
+          left();
+          await waitOneTick();
+          checkCaret(1);
+
+          // navigate right from end of value
+          m.setSelectionRange(6, 6);
+          right();
+          await waitOneTick();
+          checkCaret(6);
+
+          // // navigate right with whole input selected
+          // m.setSelectionRange(0, 14);
+          // right();
+          // await waitOneTick();
+          // checkCaret(6);
+
+          // // navigate left with whole input selected
+          // m.setSelectionRange(0, 14);
+          // right();
+          // await waitOneTick();
+          // checkCaret(1);
+        }, "arrow keys should navigate");
+
+        promise_test((t) => {
+          const m = createMaskedInput({
+            props: { maskPattern: "(___) ___-____", value: "503" },
+          });
+          t.add_cleanup(() => {
+            m.remove();
+          });
+          m.select();
+
+          return new Promise((resolve) => {
+            setTimeout(() => {
+              assert_equals(m.selectionStart, 0, "selectionStart");
+              assert_equals(m.selectionEnd, 6, "selectionEnd");
+              resolve();
+            }, 0);
+          });
+        }, "select() should select the whole input value");
+
+        test((t) => {
+          const m1 = createMaskedInput({
+            props: { maskPattern: "_-_-_", value: "123" },
+          });
+
+          assert_throws_js(
+            TypeError,
+            () => {
+              m1.setRangeText();
+            },
+            "should throw error if no arguments are passed"
+          );
+          m1.setRangeText("4", 0, 5);
+          assert_equals(m1.value, "4");
+          assert_equals(m1.maskedValue, "4- - ");
+          assert_equals(m1.selectionStart, 0);
+          assert_equals(m1.selectionEnd, 5);
+          m1.remove();
+
+          const m2 = createMaskedInput({
+            props: { maskPattern: "_-_-_", value: "123" },
+          });
+          m2.setRangeText("4", 1, 4);
+          assert_equals(m2.value, "143");
+          assert_equals(m2.maskedValue, "1-4-3");
+          assert_equals(m2.selectionStart, 1);
+          assert_equals(m2.selectionEnd, 4);
+          m2.remove();
+
+          const m3 = createMaskedInput({
+            props: { maskPattern: "_-_-_-_", value: "1234" },
+          });
+          m3.setRangeText("56", 1, 6, "select");
+          assert_equals(m3.value, "1564");
+          assert_equals(m3.maskedValue, "1-5-6-4");
+          assert_equals(m3.selectionStart, 1);
+          assert_equals(m3.selectionEnd, 5);
+          m3.remove();
+
+          const m4 = createMaskedInput({
+            props: { maskPattern: "_-_-_-_", value: "1234" },
+          });
+          m4.setRangeText("56", 1, 6, "start");
+          assert_equals(m4.value, "1564");
+          assert_equals(m4.maskedValue, "1-5-6-4");
+          assert_equals(m4.selectionStart, 1);
+          assert_equals(m4.selectionEnd, 1);
+          m4.remove();
+
+          const m5 = createMaskedInput({
+            props: { maskPattern: "_-_-_-_", value: "1234" },
+          });
+          m5.setRangeText("56", 1, 6, "end");
+          assert_equals(m5.value, "1564");
+          assert_equals(m5.maskedValue, "1-5-6-4");
+          assert_equals(m5.selectionStart, 5);
+          assert_equals(m5.selectionEnd, 5);
+          m5.remove();
+
+          const m6 = createMaskedInput({
+            props: { maskPattern: "_-_-_-_", value: "1234" },
+          });
+          m6.setSelectionRange(1, 6, "backward");
+          m6.setRangeText("56");
+          assert_equals(m6.value, "1564");
+          assert_equals(m6.maskedValue, "1-5-6-4");
+          assert_equals(m6.selectionStart, 1);
+          assert_equals(m6.selectionEnd, 6);
+          assert_equals(m6.selectionDirection, "backward");
+          m6.remove();
+        }, "setRangeText() should only replace value characters, not mask characters");
+
+        test((t) => {
+          const m = createMaskedInput({
+            props: {
+              type: "number",
+              step: "20",
+              value: "100",
+              maskPattern: "_ _ _",
+            },
+          });
+          t.add_cleanup(() => {
+            m.remove();
+          });
+          m.stepUp();
+          assert_equals(m.value, "120", "step up with no arguments: value");
+          assert_equals(
+            m.maskedValue,
+            "1 2 0",
+            "step up with no arguments: maskedValue"
+          );
+          m.stepDown();
+          assert_equals(m.value, "100", "step down with no arguments: value");
+          assert_equals(
+            m.maskedValue,
+            "1 0 0",
+            "step down with no arguments: maskedValue"
+          );
+          m.stepUp(3);
+          assert_equals(m.value, "160", "step up with step count: value");
+          assert_equals(
+            m.maskedValue,
+            "1 6 0",
+            "step up with step count: maskedValue"
+          );
+          m.stepDown(4);
+          assert_equals(m.value, "80", "step down with step count: value");
+          assert_equals(
+            m.maskedValue,
+            "8 0  ",
+            "step down with step count: maskedValue"
+          );
+          m.value = "70";
+          m.stepUp();
+          assert_equals(m.value, "80", "step up from invalid number: value");
+          assert_equals(
+            m.maskedValue,
+            "8 0  ",
+            "step up from invalid number: maskedValue"
+          );
+          m.value = "70";
+          m.stepDown();
+          assert_equals(m.value, "60", "step down from invalid number: value");
+          assert_equals(
+            m.maskedValue,
+            "6 0  ",
+            "step down from invalid number: maskedalue"
+          );
+        }, "stepUp() and stepDown() work on number inputs");
+
+        promise_test(async (t) => {
+          const m = createMaskedInput({
+            props: {
+              type: "number",
+              step: "20",
+              value: "100",
+              maskPattern: "_ _ _",
+            },
+          });
+          t.add_cleanup(() => {
+            m.remove();
+          });
+          const up = () =>
+            m.dispatchEvent(
+              new KeyboardEvent("keydown", {
+                key: "ArrowUp",
+                bubbles: true,
+                cancelable: true,
+              })
+            );
+          const down = () =>
+            m.dispatchEvent(
+              new KeyboardEvent("keydown", {
+                key: "ArrowDown",
+                bubbles: true,
+                cancelable: true,
+              })
+            );
+
+          m.setSelectionRange(1, 1);
+          up();
+          await waitOneTick();
+          assert_equals(m.value, "120", "step up with no arguments: value");
+          assert_equals(
+            m.maskedValue,
+            "1 2 0",
+            "step up with no arguments: maskedValue"
+          );
+          assert_equals(
+            m.selectionStart,
+            5,
+            "step up with no arguments: selectionStart"
+          );
+
+          m.setSelectionRange(1, 1);
+          down();
+          await waitOneTick();
+          assert_equals(m.value, "100", "step down with no arguments: value");
+          assert_equals(
+            m.maskedValue,
+            "1 0 0",
+            "step down with no arguments: maskedValue"
+          );
+          assert_equals(
+            m.selectionStart,
+            5,
+            "step down with no arguments: selectionStart"
+          );
+
+          m.value = "70";
+          m.setSelectionRange(1, 1);
+          up();
+          await waitOneTick();
+          assert_equals(m.value, "80", "step up from invalid number: value");
+          assert_equals(
+            m.maskedValue,
+            "8 0  ",
+            "step up from invalid number: maskedValue"
+          );
+          assert_equals(
+            m.selectionStart,
+            4,
+            "step up from invalid number: selectionStart"
+          );
+
+          m.value = "70";
+          m.setSelectionRange(1, 1);
+          down();
+          await waitOneTick();
+          assert_equals(m.value, "60", "step down from invalid number: value");
+          assert_equals(
+            m.maskedValue,
+            "6 0  ",
+            "step down from invalid number: maskedValue"
+          );
+          assert_equals(
+            m.selectionStart,
+            4,
+            "step down from invalid number: selectionStart"
+          );
+
+          m.value = "980";
+          m.setSelectionRange(1, 1);
+          up();
+          await waitOneTick();
+          assert_equals(m.value, "1000", "step up to unmasked display: value");
+          assert_equals(
+            m.maskedValue,
+            "1000",
+            "step up to unmasked display: maskedValue"
+          );
+          assert_equals(
+            m.selectionStart,
+            4,
+            "step up to unmasked display: selectionStart"
+          );
+        }, "up and down arrow keys step up and down on number inputs");
+
+        test(() => {
+          const m1 = createMaskedInput({
+            props: { value: "123", maskPattern: "🇺🇸$_🇺🇸$_🇺🇸$_" },
+          });
+          assert_equals(m1.maskedValue, "🇺🇸$1🇺🇸$2🇺🇸$3");
+          assert_equals(m1.maskReplacementCharacter, "_");
+          m1.setAttribute("mask-replacement-character", "$");
+          assert_equals(m1.maskedValue, "🇺🇸1_🇺🇸2_🇺🇸3_");
+          assert_equals(m1.maskReplacementCharacter, "$");
+          m1.maskReplacementCharacter = "🇺🇸";
+          assert_equals(m1.maskedValue, "1$_2$_3$_");
+          assert_equals(m1.maskReplacementCharacter, "🇺🇸");
+          m1.remove();
+        }, "can read and set maskReplacementCharacter");
+
+        test(() => {
+          const m1 = createMaskedInput({
+            props: { value: "123", maskPattern: "_ _ _" },
+          });
+          assert_equals(m1.maskPattern, "_ _ _");
+          assert_equals(m1.maskedValue, "1 2 3");
+          m1.maskPattern = "-_-_-_-";
+          assert_equals(m1.maskPattern, "-_-_-_-");
+          assert_equals(m1.maskedValue, "-1-2-3-");
+          m1.setAttribute("mask-pattern", "**___**");
+          assert_equals(m1.maskPattern, "**___**");
+          assert_equals(m1.maskedValue, "**123**");
+          m1.remove();
+
+          const m2 = createMaskedInput({
+            attrs: { value: "123", "mask-pattern": "_ _ _" },
+          });
+          assert_equals(m2.maskPattern, "_ _ _");
+          assert_equals(m2.maskedValue, "1 2 3");
+          m2.setAttribute("mask-pattern", "**___**");
+          assert_equals(m2.maskPattern, "**___**");
+          assert_equals(m2.maskedValue, "**123**");
+          m2.maskPattern = "-_-_-_-";
+          assert_equals(m2.maskPattern, "-_-_-_-");
+          assert_equals(m2.maskedValue, "-1-2-3-");
+          m2.remove();
+        }, "can read and set maskPattern");
+
+        test(() => {
+          const m1 = createMaskedInput({
+            props: {
+              type: "number",
+              maskPattern: "$__.__ USD",
+              value: "1234",
+            },
+          });
+          assert_equals(
+            m1.maskedValue,
+            "$12.34 USD",
+            "filled pattern in number input"
+          );
+          m1.remove();
+
+          const m2 = createMaskedInput({
+            props: {
+              type: "password",
+              maskPattern: "[__ __ __]",
+              value: "123456",
+            },
+          });
+          assert_equals(
+            m2.maskedValue,
+            "[•• •• ••]",
+            "filled pattern in password input"
+          );
+          m2.remove();
+
+          const m3 = createMaskedInput({
+            props: {
+              type: "number",
+              maskPattern: "$__.__ USD",
+              value: "12",
+            },
+          });
+          assert_equals(
+            m3.maskedValue,
+            "$12.   USD",
+            "partially filled pattern in number input"
+          );
+          m3.remove();
+
+          const m4 = createMaskedInput({
+            props: {
+              type: "password",
+              maskPattern: "[__ __ __]",
+              value: "1234",
+            },
+          });
+          assert_equals(
+            m4.maskedValue,
+            "[•• ••   ]",
+            "partially filled pattern in password input"
+          );
+          m4.remove();
+
+          const m5 = createMaskedInput({
+            props: {
+              type: "number",
+              maskPattern: "$__.__ USD",
+              value: "12",
+            },
+            attrs: {
+              "show-replacement-characters": true,
+            },
+          });
+          assert_equals(
+            m5.maskedValue,
+            "$12.__ USD",
+            "partially filled pattern in number input with replacement characters shown"
+          );
+          m5.remove();
+
+          const m6 = createMaskedInput({
+            props: {
+              type: "password",
+              maskPattern: "[__ __ __]",
+              value: "1234",
+            },
+            attrs: {
+              "show-replacement-characters": true,
+            },
+          });
+          assert_equals(
+            m6.maskedValue,
+            "[•• •• __]",
+            "partially filled pattern in password input with replacement characters shown"
+          );
+          m6.remove();
+
+          const m7 = createMaskedInput({
+            props: {
+              type: "number",
+              maskPattern: "$NN.NN USD",
+              maskReplacementCharacter: "N",
+              value: "12",
+            },
+            attrs: {
+              "show-replacement-characters": true,
+            },
+          });
+          assert_equals(
+            m7.maskedValue,
+            "$12.NN USD",
+            "partially filled pattern in number input with custom replacement characters shown"
+          );
+          m7.remove();
+
+          const m8 = createMaskedInput({
+            props: {
+              type: "password",
+              maskPattern: "[NN NN NN]",
+              maskReplacementCharacter: "N",
+              value: "1234",
+            },
+            attrs: {
+              "show-replacement-characters": true,
+            },
+          });
+          assert_equals(
+            m8.maskedValue,
+            "[•• •• NN]",
+            "partially filled pattern in password input with custom replacement characters shown"
+          );
+          m8.remove();
+
+          const m9 = createMaskedInput({
+            props: {
+              type: "number",
+              maskPattern: "$__.__ USD",
+              value: "",
+            },
+          });
+          assert_equals(m9.maskedValue, "", "empty pattern in number input");
+          m9.remove();
+
+          const m10 = createMaskedInput({
+            props: {
+              type: "password",
+              maskPattern: "[__ __ __]",
+              value: "",
+            },
+          });
+          assert_equals(m10.maskedValue, "", "empty pattern in password input");
+          m10.remove();
+
+          const m11 = createMaskedInput({
+            props: {
+              type: "number",
+              maskPattern: "$__.__ USD",
+              value: "",
+            },
+            attrs: {
+              "show-empty-mask": true,
+            },
+          });
+          assert_equals(
+            m11.maskedValue,
+            "$  .   USD",
+            "empty pattern in number input with show-empty-mask"
+          );
+          m11.remove();
+
+          const m12 = createMaskedInput({
+            props: {
+              type: "password",
+              maskPattern: "[__ __ __]",
+              value: "",
+            },
+            attrs: {
+              "show-empty-mask": true,
+            },
+          });
+          assert_equals(
+            m12.maskedValue,
+            "[        ]",
+            "empty pattern in password input with show-empty-mask"
+          );
+          m12.remove();
+        }, "can read maskedValue");
+
+        test((t) => {
+          const m = createMaskedInput({});
+          t.add_cleanup(() => {
+            m.remove();
+          });
+          assert_throws_dom("NotSupportedError", () => {
+            m.maskedValue = "$__.__";
+          });
+        }, "throws error when attempting to set maskedValue");
+
+        test(() => {
+          const m1 = createMaskedInput({ props: { value: "123" } });
+          assert_equals(m1.value, "123");
+          assert_equals(
+            m1.getAttribute("value"),
+            null,
+            "value set as prop only is not reflected to attribute"
+          );
+          m1.value = "456";
+          assert_equals(m1.value, "456");
+          m1.remove();
+
+          const m2 = createMaskedInput({ attrs: { value: "123" } });
+          assert_equals(m2.value, "123");
+          assert_equals(
+            m2.getAttribute("value"),
+            "123",
+            "value set as attribute and not yet modified by prop is reflected"
+          );
+          m2.setAttribute("value", "456");
+          assert_equals(m2.value, "456");
+          assert_equals(
+            m2.getAttribute("value"),
+            "456",
+            "value set by changing attribute and not yet modified by prop is reflected"
+          );
+          m2.value = "789";
+          assert_equals(m2.value, "789");
+          assert_equals(
+            m2.getAttribute("value"),
+            "456",
+            "value set by prop is not reflected - attribute retains previously set value"
+          );
+          m2.setAttribute("value", "000");
+          assert_equals(
+            m2.value,
+            "789",
+            "once set by prop, attribute changes do not affect the prop value"
+          );
+          assert_equals(
+            m2.getAttribute("value"),
+            "000",
+            "attribute value is returned by getAttribute('value') even though it is not the displayed value"
+          );
+          m2.remove();
+        }, "can read and set value");
+
+        test(() => {
+          const m1 = createMaskedInput({ props: { value: "123" } });
+          assert_true(
+            Number.isNaN(m1.valueAsNumber),
+            "non-numeric inputs return NaN even for values that could be parsed as numbers"
+          );
+          assert_throws_dom(
+            "InvalidStateError",
+            () => {
+              m1.valueAsNumber = 123;
+            },
+            "setting valueAsNumber on a non-numeric input throws a DOMException"
+          );
+          m1.remove();
+
+          const m2 = createMaskedInput({
+            props: { type: "number", value: 123 },
+          });
+          assert_equals(
+            m2.valueAsNumber,
+            123,
+            "number inputs return their value as a number for valueAsNumber"
+          );
+          m2.valueAsNumber = 456;
+          assert_equals(
+            m2.valueAsNumber,
+            456,
+            "setting valueAsNumber to a number should work"
+          );
+          m2.valueAsNumber = 1e3;
+          assert_equals(
+            m2.valueAsNumber,
+            1000,
+            "setting valueAsNumber to a number should work"
+          );
+          assert_equals(
+            m2.value,
+            "1000",
+            "setting valueAsNumber to 1e3 should display 1000"
+          );
+          m2.valueAsNumber = "42";
+          assert_equals(
+            m2.valueAsNumber,
+            42,
+            "setting valueAsNumber to a string that can be coerced via Number() works"
+          );
+          m2.valueAsNumber = "4foo2";
+          assert_equals(
+            m2.valueAsNumber,
+            NaN,
+            "strings that can be parsed as numbers but not cast via Number() convert to NaN"
+          );
+          assert_equals(m2.value, "", "NaN values are not displayed");
+          m2.remove();
+        }, "can read and set valueAsNumber for number inputs");
+
+        test(() => {
+          const types = [
+            "text",
+            "url",
+            "search",
+            "tel",
+            "email",
+            "password",
+            "number",
+          ];
+          for (const type of types) {
+            for (const otherType of types) {
+              if (otherType === type) {
+                continue;
+              }
+              for (const otherOtherType of types) {
+                if (otherOtherType === type || otherOtherType === otherType) {
+                  continue;
+                }
+
+                const m1 = createMaskedInput({ props: { type } });
+                assert_equals(m1.type, type, "type prop can be read");
+                assert_equals(
+                  m1.getAttribute("type"),
+                  type,
+                  "type prop is reflected"
+                );
+                m1.type = otherType;
+                assert_equals(
+                  m1.type,
+                  otherType,
+                  `type prop can be set from "${type}" to "${otherType}"`
+                );
+                assert_equals(
+                  m1.getAttribute("type"),
+                  otherType,
+                  "changes to the type prop are reflected"
+                );
+                m1.setAttribute("type", otherOtherType);
+                assert_equals(
+                  m1.type,
+                  otherOtherType,
+                  `setting type attribute from "${otherType}" to "${otherOtherType}" changes prop`
+                );
+                assert_equals(m1.getAttribute("type"), otherOtherType);
+                m1.remove();
+
+                const m2 = createMaskedInput({ attrs: { type } });
+                assert_equals(m2.type, type);
+                assert_equals(m2.getAttribute("type"), type);
+                m2.setAttribute("type", otherOtherType);
+                assert_equals(m2.type, otherOtherType);
+                assert_equals(m2.getAttribute("type"), otherOtherType);
+                m2.type = otherType;
+                assert_equals(m2.type, otherType);
+                assert_equals(m2.getAttribute("type"), otherType);
+                m2.remove();
+              }
+            }
+          }
+        }, "can read and set type");
+
+        test(() => {}, "inputs should not exceed maxlength");
+
+        test(() => {}, "checkValidity() works");
+        test(() => {}, "form validation works");
+        test(() => {}, "mask works on RTL inputs");
+        test(() => {},
+        "input accepts and masks autocomplete suggestions from list");
+        test(() => {}, "");
+        test(() => {}, "");
+        test(() => {}, "");
+        test(() => {}, "");
+
+        // beforeinput tests
+        for (const { inputTypes, baseInput, variants } of testCases) {
+          for (const { input, output, description = "" } of variants) {
+            for (const inputType of inputTypes) {
+              if (
+                new InputEvent("beforeinput", { inputType }).inputType !==
+                inputType
+              ) {
+                continue;
+              }
+              for (const selectionDirection of [
+                "forward",
+                "backward",
+                "none",
+              ]) {
+                for (const type of [
+                  "text",
+                  "url",
+                  "search",
+                  "tel",
+                  "email",
+                  "password",
+                  "number",
+                ]) {
+                  const {
+                    maskPattern,
+                    maskReplacementCharacter,
+                    value,
+                    attributes = {},
+                    selectionStart,
+                    selectionEnd,
+                    passwordSelectionStart,
+                    passwordSelectionEnd,
+                    data = null,
+                  } = { ...baseInput, ...input };
+
+                  if (
+                    type === "number" &&
+                    (!/^\d*$/.test(value) || !/^\d*$/.test(output.value))
+                  ) {
+                    // do not test number fields that use non-numeric values
+                    continue;
+                  } else {
+                    promise_test(() => {
+                      const maskedInput = createMaskedInput({
+                        props: {
+                          type,
+                          maskPattern,
+                          maskReplacementCharacter,
+                          value,
+                        },
+                        attrs: attributes,
+                      });
+                      let inputEventType;
+                      const logEvent = (e) => {
+                        inputEventType = e.inputType;
+                      };
+                      maskedInput.addEventListener("input", logEvent, {
+                        once: true,
+                      });
+                      maskedInput.setSelectionRange(
+                        type === "password" && passwordSelectionStart != null
+                          ? passwordSelectionStart
+                          : selectionStart,
+                        type === "password" && passwordSelectionEnd != null
+                          ? passwordSelectionEnd
+                          : selectionEnd,
+                        selectionDirection
+                      );
+                      maskedInput.dispatchEvent(
+                        new InputEvent("beforeinput", {
+                          inputType,
+                          data,
+                          bubbles: true,
+                          cancelable: true,
+                        })
+                      );
+
+                      // wait for event handlers to run, then assert output
+                      return new Promise((resolve) => {
+                        setTimeout(() => {
+                          assert_equals(
+                            type === "password"
+                              ? output.passwordMaskedValue
+                              : output.maskedValue,
+                            maskedInput.maskedValue
+                          );
+                          assert_equals(output.value, maskedInput.value);
+                          assert_equals(
+                            type === "password" &&
+                              output.passwordSelectionStart != null
+                              ? output.passwordSelectionStart
+                              : output.selectionStart,
+                            maskedInput.selectionStart
+                          );
+                          assert_equals(
+                            type === "password" &&
+                              output.passwordSelectionEnd != null
+                              ? output.passwordSelectionEnd
+                              : output.selectionEnd,
+                            maskedInput.selectionEnd
+                          );
+                          assert_equals(
+                            selectionDirection,
+                            maskedInput.selectionDirection
+                          );
+                          assert_equals(inputEventType, inputType);
+                          resolve();
+                        }, 0);
+                      }).then(() => {
+                        maskedInput.remove();
+                      });
+                    }, type + ": " + inputType + ": selectionDirection: " + selectionDirection + ": " + description);
+                  }
+                }
+              }
+            }
+          }
+        }
       });
     </script>
   </body>
