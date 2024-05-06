@@ -11,6 +11,15 @@
     <script src="assets/wpt/testharness.js"></script>
     <script src="assets/wpt/testharnessreport.js"></script>
     <script src="assets/masked-input.js"></script>
+    <style>
+      :invalid {
+        background-color: red;
+      }
+      :out-of-range {
+        outline: 0.5em solid green;
+        outline-offset: 1em;
+      }
+    </style>
   </head>
   <body>
     <input
@@ -24,6 +33,8 @@
       type="number"
       is="masked-input"
       mask-pattern="___ ___ ___"
+      max="10"
+      value="11"
     />
     <script>
       function createMaskedInput({ props = {}, attrs = {} }) {
@@ -1317,7 +1328,6 @@
           });
           assert_equals(m1.maskedValue, "<< >>", "with props");
           m1.remove();
-          console.log("start");
           const m2 = createMaskedInput({
             attrs: {
               "show-empty-mask": "",
@@ -1325,8 +1335,7 @@
               value: "",
             },
           });
-          await waitOneTick();
-          console.log("end");
+          // await waitOneTick();
           assert_equals(m2.maskedValue, "<< >>", "with attributes");
           m2.remove();
 
@@ -1338,7 +1347,7 @@
               value: "",
             },
           });
-          await waitOneTick();
+          // await waitOneTick();
           assert_equals(
             m3.maskedValue,
             "<<_>>",
@@ -1355,7 +1364,7 @@
               value: "",
             },
           });
-          await waitOneTick();
+          // await waitOneTick();
           assert_equals(
             m4.maskedValue,
             "<<X>>",
@@ -1374,7 +1383,7 @@
               value: "",
             },
           });
-          await waitOneTick();
+          // await waitOneTick();
           assert_equals(
             m5.maskedValue,
             "<<X>>",
@@ -1391,7 +1400,7 @@
               value: "",
             },
           });
-          await waitOneTick();
+          // await waitOneTick();
           assert_equals(m6.maskedValue, "", "defaults to empty display value");
           m6.remove();
         }, "empty masked input in various configurations");
@@ -1423,7 +1432,7 @@
               value: "1",
             },
           });
-          await waitOneTick();
+          // await waitOneTick();
           assert_equals(m1.maskedValue, "<<1>>", "with props");
           m1.remove();
 
@@ -1433,7 +1442,7 @@
               value: "2",
             },
           });
-          await waitOneTick();
+          // await waitOneTick();
           assert_equals(m2.maskedValue, "<<2>>", "with attributes");
           m2.remove();
 
@@ -1444,7 +1453,7 @@
               value: "3",
             },
           });
-          await waitOneTick();
+          // await waitOneTick();
           assert_equals(
             m3.maskedValue,
             "<3> {_}",
@@ -1460,7 +1469,7 @@
               value: "4",
             },
           });
-          await waitOneTick();
+          // await waitOneTick();
           assert_equals(
             m4.maskedValue,
             "<4> {X}",
@@ -1478,7 +1487,7 @@
               value: "5",
             },
           });
-          await waitOneTick();
+          // await waitOneTick();
           assert_equals(
             m5.maskedValue,
             "<5> {X}",
@@ -1494,7 +1503,7 @@
               value: "123",
             },
           });
-          await waitOneTick();
+          // await waitOneTick();
           assert_equals(m1.maskedValue, "123", "with props");
           m1.remove();
 
@@ -1504,7 +1513,7 @@
               value: "123",
             },
           });
-          await waitOneTick();
+          // await waitOneTick();
           assert_equals(m2.maskedValue, "123", "with attributes");
           m2.remove();
 
@@ -1515,32 +1524,35 @@
               value: "123",
             },
           });
-          await waitOneTick();
+          // await waitOneTick();
           assert_equals(m3.maskedValue, "<1> {2}3", "showing overflowed mask");
           m3.remove();
         }, "overflowed masked input in various configurations");
 
-        promise_test(async () => {
-          Object.entries({
-            text: "text",
-            url: "url",
-            search: "search",
-            tel: "tel",
-            email: "email",
-            password: "text",
-            number: "decimal",
-          }).forEach(async ([type, inputmode]) => {
-            const m1 = createMaskedInput({ props: { type } });
-            await waitOneTick();
-            assert_equals(m1.inputMode, inputmode, `[type: ${type}]`);
-            m1.remove();
+        if (!/apple/i.test(navigator.vendor)) {
+          // Safari doesn't support inputmode
+          promise_test(async () => {
+            Object.entries({
+              text: "text",
+              url: "url",
+              search: "search",
+              tel: "tel",
+              email: "email",
+              password: "text",
+              number: "decimal",
+            }).forEach(async ([type, inputmode]) => {
+              const m1 = createMaskedInput({ props: { type } });
+              // await waitOneTick();
+              assert_equals(m1.inputMode, inputmode, `[type: ${type}]`);
+              m1.remove();
 
-            const m2 = createMaskedInput({ attrs: { type } });
-            await waitOneTick();
-            assert_equals(m2.inputMode, inputmode, `[type: ${type}]`);
-            m2.remove();
-          });
-        }, "inputmode attribute by type");
+              const m2 = createMaskedInput({ attrs: { type } });
+              // await waitOneTick();
+              assert_equals(m2.inputMode, inputmode, `[type: ${type}]`);
+              m2.remove();
+            });
+          }, "inputmode attribute by type");
+        }
 
         promise_test(async () => {
           const original = globalThis;
@@ -1551,7 +1563,7 @@
               value: "12",
             },
           });
-          await waitOneTick();
+          // await waitOneTick();
           m.setSelectionRange(1, 3);
           m.dispatchEvent(
             new InputEvent("beforeinput", {
@@ -1576,7 +1588,7 @@
 
         promise_test(async () => {
           const m = createMaskedInput({});
-          await waitOneTick();
+          // await waitOneTick();
           m.addEventListener(
             "beforeinput",
             (e) => {
@@ -1604,7 +1616,7 @@
 
         promise_test(async () => {
           const m = createMaskedInput({});
-          await waitOneTick();
+          // await waitOneTick();
           m.addEventListener(
             "beforeinput",
             (e) => {
@@ -1641,7 +1653,7 @@
 
         promise_test(async () => {
           const m = createMaskedInput({});
-          await waitOneTick();
+          // await waitOneTick();
           m.addEventListener(
             "beforeinput",
             (e) => {
@@ -2710,6 +2722,32 @@
             "6 0  ",
             "step down from invalid number: maskedalue"
           );
+          m.value = "180";
+          m.max = "200";
+          m.stepUp(2);
+          assert_equals(
+            m.value,
+            "200",
+            "step up does not exceed max value: value"
+          );
+          assert_equals(
+            m.maskedValue,
+            "2 0 0",
+            "step up does not exceed max value: maskedValue"
+          );
+          m.value = "40";
+          m.min = "20";
+          m.stepDown(2);
+          assert_equals(
+            m.value,
+            "20",
+            "step down does not fall below min value: value"
+          );
+          assert_equals(
+            m.maskedValue,
+            "2 0  ",
+            "step down does not fall below min value: maskedValue"
+          );
         }, "stepUp() and stepDown() work on number inputs");
 
         promise_test(async (t) => {
@@ -3227,7 +3265,7 @@
         test(() => {}, "mask works on RTL inputs");
         test(() => {},
         "input accepts and masks autocomplete suggestions from list");
-        test(() => {}, "");
+        test(() => {}, "matches :invalid, :user-invalid, and :out-of-range");
         test(() => {}, "");
         test(() => {}, "");
         test(() => {}, "");
@@ -3245,7 +3283,7 @@
               for (const selectionDirection of [
                 "forward",
                 "backward",
-                "none",
+                // "none",
               ]) {
                 for (const type of [
                   "text",

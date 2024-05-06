@@ -7,6 +7,8 @@ class MaskedInput extends HTMLInputElement {
     "show-replacement-characters",
     "type",
     "value",
+    "pattern",
+    "required",
     "maxlength",
     "minlength",
     "step",
@@ -76,6 +78,10 @@ class MaskedInput extends HTMLInputElement {
     this.#isValueReflected = false;
     // do not limit the value to maxlength when set programatically
     this.#unmaskedValue = String(value);
+
+    // set validity
+    this.#setValidity();
+
     this.#applyMask();
   }
 
@@ -114,7 +120,14 @@ class MaskedInput extends HTMLInputElement {
     // show the correct soft keyboard for the input type
     super.inputMode =
       type === "password" ? "text" : type === "number" ? "decimal" : type;
+
+    this.#setValidity();
   }
+
+  get validity() {
+    return this.#getNativeInput().validity;
+  }
+  set validity(v) {}
 
   select() {
     this.setSelectionRange(
@@ -239,6 +252,9 @@ class MaskedInput extends HTMLInputElement {
             : newValue === "number"
             ? "decimal"
             : newValue;
+
+        // validate
+        this.#setValidity();
         break;
       }
 
@@ -253,12 +269,35 @@ class MaskedInput extends HTMLInputElement {
         if (this.#isValueReflected && newValue !== this.#unmaskedValue) {
           // do not limit the value to maxlength when set programatically
           this.#unmaskedValue = newValue;
+
+          // set validity
+          this.#setValidity();
+
           this.#applyMask();
         }
         break;
       }
+
+      case "pattern":
+      case "required":
+      case "maxlength":
+      case "minlength":
+      case "step":
+      case "min":
+      case "max": {
+        // this.#setValidity();
+      }
     }
   }
+
+  #setValidity = () => {
+    const nativeInput = this.#getNativeInput();
+    const validationMessage = nativeInput.checkValidity()
+      ? ""
+      : nativeInput.validationMessage;
+    this.setCustomValidity(validationMessage);
+    this.maxLength = "0";
+  };
 
   #applyMask = () => {
     this.#characterSlots = [];
@@ -423,6 +462,7 @@ class MaskedInput extends HTMLInputElement {
       charIndexAfterSelection,
       selectedCharIndexes,
     } = this.#getSelectionPosition();
+    const selectionDirection = this.selectionDirection;
 
     if (charIndexBeforeSelection == null && selectedCharIndexes.length === 0) {
       return;
@@ -464,7 +504,7 @@ class MaskedInput extends HTMLInputElement {
       ).start;
     }
 
-    this.setSelectionRange(nextPosition, nextPosition, this.selectionDirection);
+    this.setSelectionRange(nextPosition, nextPosition, selectionDirection);
   };
 
   #deleteForward = () => {
@@ -862,6 +902,10 @@ class MaskedInput extends HTMLInputElement {
     } else {
       this.#unmaskedValue = value;
     }
+
+    // set validity
+    this.#setValidity();
+
     return this.#unmaskedValue !== prevValue;
   };
 
