@@ -285,7 +285,7 @@ class MaskedInput extends HTMLInputElement {
       case "step":
       case "min":
       case "max": {
-        // this.#setValidity();
+        this.#setValidity();
       }
     }
   }
@@ -296,7 +296,6 @@ class MaskedInput extends HTMLInputElement {
       ? ""
       : nativeInput.validationMessage;
     this.setCustomValidity(validationMessage);
-    this.maxLength = "0";
   };
 
   #applyMask = () => {

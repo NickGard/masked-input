@@ -1316,7 +1316,7 @@
         ];
 
         // configurations
-        promise_test(async () => {
+        promise_test(async (t) => {
           const m1 = createMaskedInput({
             props: {
               maskPattern: "<<_>>",
@@ -1326,8 +1326,10 @@
               "show-empty-mask": "",
             },
           });
+          t.add_cleanup(() => {
+            m1.remove();
+          });
           assert_equals(m1.maskedValue, "<< >>", "with props");
-          m1.remove();
           const m2 = createMaskedInput({
             attrs: {
               "show-empty-mask": "",
@@ -1335,9 +1337,11 @@
               value: "",
             },
           });
-          // await waitOneTick();
+          t.add_cleanup(() => {
+            m2.remove();
+          });
+          await waitOneTick();
           assert_equals(m2.maskedValue, "<< >>", "with attributes");
-          m2.remove();
 
           const m3 = createMaskedInput({
             attrs: {
@@ -1347,13 +1351,15 @@
               value: "",
             },
           });
-          // await waitOneTick();
+          t.add_cleanup(() => {
+            m3.remove();
+          });
+          await waitOneTick();
           assert_equals(
             m3.maskedValue,
             "<<_>>",
             "showing replacement characters"
           );
-          m3.remove();
 
           const m4 = createMaskedInput({
             attrs: {
@@ -1364,13 +1370,15 @@
               value: "",
             },
           });
-          // await waitOneTick();
+          t.add_cleanup(() => {
+            m4.remove();
+          });
+          await waitOneTick();
           assert_equals(
             m4.maskedValue,
             "<<X>>",
             "showing custom (attr) replacement characters"
           );
-          m4.remove();
 
           const m5 = createMaskedInput({
             props: {
@@ -1383,13 +1391,15 @@
               value: "",
             },
           });
-          // await waitOneTick();
+          t.add_cleanup(() => {
+            m5.remove();
+          });
+          await waitOneTick();
           assert_equals(
             m5.maskedValue,
             "<<X>>",
             "showing custom (prop) replacement characters"
           );
-          m5.remove();
 
           const m6 = createMaskedInput({
             props: {
@@ -1400,12 +1410,14 @@
               value: "",
             },
           });
-          // await waitOneTick();
+          t.add_cleanup(() => {
+            m6.remove();
+          });
+          await waitOneTick();
           assert_equals(m6.maskedValue, "", "defaults to empty display value");
-          m6.remove();
         }, "empty masked input in various configurations");
 
-        test(() => {
+        promise_test(async () => {
           assert_throws_dom(
             "NotSupportedError",
             () => {
@@ -1418,6 +1430,7 @@
             const m = createMaskedInput({ attrs: { type: "range" } });
             m.remove();
           });
+          await waitOneTick();
           assert_equals(
             "NotSupportedError",
             attrError?.name,
@@ -1425,16 +1438,18 @@
           );
         }, "invalid configurations");
 
-        promise_test(async () => {
+        promise_test(async (t) => {
           const m1 = createMaskedInput({
             props: {
               maskPattern: "<<_>>",
               value: "1",
             },
           });
-          // await waitOneTick();
+          t.add_cleanup(() => {
+            m1.remove();
+          });
+          await waitOneTick();
           assert_equals(m1.maskedValue, "<<1>>", "with props");
-          m1.remove();
 
           const m2 = createMaskedInput({
             attrs: {
@@ -1442,9 +1457,11 @@
               value: "2",
             },
           });
-          // await waitOneTick();
+          t.add_cleanup(() => {
+            m2.remove();
+          });
+          await waitOneTick();
           assert_equals(m2.maskedValue, "<<2>>", "with attributes");
-          m2.remove();
 
           const m3 = createMaskedInput({
             attrs: {
@@ -1453,13 +1470,15 @@
               value: "3",
             },
           });
-          // await waitOneTick();
+          t.add_cleanup(() => {
+            m3.remove();
+          });
+          await waitOneTick();
           assert_equals(
             m3.maskedValue,
             "<3> {_}",
             "showing replacement characters"
           );
-          m3.remove();
 
           const m4 = createMaskedInput({
             attrs: {
@@ -1469,13 +1488,15 @@
               value: "4",
             },
           });
-          // await waitOneTick();
+          t.add_cleanup(() => {
+            m4.remove();
+          });
+          await waitOneTick();
           assert_equals(
             m4.maskedValue,
             "<4> {X}",
             "showing custom (attr) replacement characters"
           );
-          m4.remove();
 
           const m5 = createMaskedInput({
             props: {
@@ -1487,25 +1508,29 @@
               value: "5",
             },
           });
-          // await waitOneTick();
+          t.add_cleanup(() => {
+            m5.remove();
+          });
+          await waitOneTick();
           assert_equals(
             m5.maskedValue,
             "<5> {X}",
             "showing custom (prop) replacement characters"
           );
-          m5.remove();
         }, "filled masked input in various configurations");
 
-        promise_test(async () => {
+        promise_test(async (t) => {
           const m1 = createMaskedInput({
             props: {
               maskPattern: "<<_>>",
               value: "123",
             },
           });
-          // await waitOneTick();
+          t.add_cleanup(() => {
+            m1.remove();
+          });
+          await waitOneTick();
           assert_equals(m1.maskedValue, "123", "with props");
-          m1.remove();
 
           const m2 = createMaskedInput({
             attrs: {
@@ -1513,9 +1538,11 @@
               value: "123",
             },
           });
-          // await waitOneTick();
+          t.add_cleanup(() => {
+            m2.remove();
+          });
+          await waitOneTick();
           assert_equals(m2.maskedValue, "123", "with attributes");
-          m2.remove();
 
           const m3 = createMaskedInput({
             attrs: {
@@ -1524,9 +1551,11 @@
               value: "123",
             },
           });
-          // await waitOneTick();
+          t.add_cleanup(() => {
+            m3.remove();
+          });
+          await waitOneTick();
           assert_equals(m3.maskedValue, "<1> {2}3", "showing overflowed mask");
-          m3.remove();
         }, "overflowed masked input in various configurations");
 
         if (!/apple/i.test(navigator.vendor)) {
@@ -1554,41 +1583,40 @@
           }, "inputmode attribute by type");
         }
 
-        promise_test(async () => {
-          const original = globalThis;
-          globalThis = { navigator: { vendor: "Apple" } };
-          const m = createMaskedInput({
-            props: {
-              maskPattern: "-_--_-",
-              value: "12",
-            },
-          });
-          // await waitOneTick();
-          m.setSelectionRange(1, 3);
-          m.dispatchEvent(
-            new InputEvent("beforeinput", {
-              bubbles: true,
-              cancelable: true,
-              inputType: "insertText",
-              data: "-1",
-            })
-          );
-          await new Promise((resolve) => {
-            setTimeout(() => {
-              assert_equals(m.value, "21");
-              assert_equals(m.maskedValue, "-2--1-");
-              assert_equals(m.selectionStart, 5);
-              assert_equals(m.selectionEnd, 5);
-              resolve();
-            }, 0);
-          });
-          m.remove();
-          globalThis = original;
-        }, "Safari transpose event");
+        if (/apple/i.test(navigator.vendor)) {
+          promise_test(async (t) => {
+            const m = createMaskedInput({
+              props: {
+                maskPattern: "-_--_-",
+                value: "12",
+              },
+            });
+            t.add_cleanup(() => {
+              m.remove();
+            });
+            await waitOneTick();
+            m.setSelectionRange(1, 3);
+            m.dispatchEvent(
+              new InputEvent("beforeinput", {
+                bubbles: true,
+                cancelable: true,
+                inputType: "insertText",
+                data: "-1",
+              })
+            );
+            await waitOneTick();
+            assert_equals(m.value, "21");
+            assert_equals(m.maskedValue, "-2--1-");
+            assert_equals(m.selectionStart, 5);
+            assert_equals(m.selectionEnd, 5);
+          }, "Safari transpose event");
+        }
 
-        promise_test(async () => {
+        promise_test(async (t) => {
           const m = createMaskedInput({});
-          // await waitOneTick();
+          t.add_cleanup(() => {
+            m.remove();
+          });
           m.addEventListener(
             "beforeinput",
             (e) => {
@@ -1605,18 +1633,15 @@
               cancelable: true,
             })
           );
-          return new Promise((resolve) => {
-            setTimeout(() => {
-              assert_equals(m.value, "", "beforeinput value");
-              m.remove();
-              resolve();
-            }, 0);
-          });
+          await waitOneTick();
+          assert_equals(m.value, "", "beforeinput value");
         }, "beforeinput::preventDefault()");
 
-        promise_test(async () => {
+        promise_test(async (t) => {
           const m = createMaskedInput({});
-          // await waitOneTick();
+          t.add_cleanup(() => {
+            m.remove();
+          });
           m.addEventListener(
             "beforeinput",
             (e) => {
@@ -1639,21 +1664,15 @@
               cancelable: true,
             })
           );
-          return new Promise((resolve) => {
-            setTimeout(() => {
-              assert_equals(m.value, "2", "beforeinput value");
-              m.remove();
-              window.removeEventListener("beforeinput", unreachable, {
-                once: true,
-              });
-              resolve();
-            }, 0);
+          await waitOneTick();
+          assert_equals(m.value, "2", "beforeinput value");
+          window.removeEventListener("beforeinput", unreachable, {
+            once: true,
           });
         }, "beforeinput::stopPropagation()");
 
-        promise_test(async () => {
+        promise_test(async (t) => {
           const m = createMaskedInput({});
-          // await waitOneTick();
           m.addEventListener(
             "beforeinput",
             (e) => {
@@ -1667,6 +1686,10 @@
             );
           };
           m.addEventListener("beforeinput", unreachable, { once: true });
+          t.add_cleanup(() => {
+            m.removeEventListener("beforeinput", unreachable, { once: true });
+            m.remove();
+          });
           m.setSelectionRange(0, 0);
           m.dispatchEvent(
             new InputEvent("beforeinput", {
@@ -1676,31 +1699,37 @@
               cancelable: true,
             })
           );
-          return new Promise((resolve) => {
-            setTimeout(() => {
-              assert_equals(m.value, "2", "default still works");
-              m.removeEventListener("beforeinput", unreachable, { once: true });
-              m.remove();
-              resolve();
-            }, 0);
-          });
+          await waitOneTick();
+          assert_equals(m.value, "2", "default still works");
         }, "beforeinput::stopImmediatePropagation()");
 
-        promise_test(() => {
+        promise_test(async (t) => {
           const m = createMaskedInput({});
+          let stopPropagationCalled = false;
+          let unreachableListenerCalled = false;
+          t.add_cleanup(() => {
+            m.remove();
+          });
           m.addEventListener(
             "input",
             (e) => {
               e.stopPropagation();
+              stopPropagationCalled = true;
             },
             { once: true }
           );
           const unreachable = (e) => {
+            unreachableListenerCalled = true;
             throw new AssertionError(
               "event propagated after calling event.stopPropagation()"
             );
           };
           window.addEventListener("input", unreachable, { once: true });
+          t.add_cleanup(() => {
+            window.removeEventListener("input", unreachable, {
+              once: true,
+            });
+          });
           m.setSelectionRange(0, 0);
           m.dispatchEvent(
             new InputEvent("input", {
@@ -1708,32 +1737,35 @@
               cancelable: false,
             })
           );
-          return new Promise((resolve) => {
-            setTimeout(() => {
-              m.remove();
-              window.removeEventListener("input", unreachable, {
-                once: true,
-              });
-              resolve();
-            }, 0);
-          });
+          await waitOneTick();
+          assert_true(stopPropagationCalled);
+          assert_false(unreachableListenerCalled);
         }, "input::stopPropagation()");
 
-        promise_test(() => {
+        promise_test(async (t) => {
           const m = createMaskedInput({});
+          let stopImmediatePropagationCalled = false;
+          let unreachableListenerCalled = false;
           m.addEventListener(
             "input",
             (e) => {
+              stopImmediatePropagationCalled = true;
               e.stopImmediatePropagation();
             },
             { once: true }
           );
           const unreachable = (e) => {
+            unreachableListenerCalled = true;
             throw new AssertionError(
               "event propagated after calling event.stopImmediatePropagation()"
             );
           };
           m.addEventListener("input", unreachable, { once: true });
+          t.add_cleanup(() => {
+            m.removeEventListener("input", unreachable, {
+              once: true,
+            });
+          });
           m.setSelectionRange(0, 0);
           m.dispatchEvent(
             new InputEvent("input", {
@@ -1741,18 +1773,17 @@
               cancelable: false,
             })
           );
-          return new Promise((resolve) => {
-            setTimeout(() => {
-              m.removeEventListener("input", unreachable, { once: true });
-              m.remove();
-              resolve();
-            }, 0);
-          });
+          await waitOneTick();
+          assert_true(stopImmediatePropagationCalled);
+          assert_false(unreachableListenerCalled);
         }, "input::stopImmediatePropagation()");
 
-        promise_test(() => {
+        promise_test(async (t) => {
           let windowLevelEvent;
           const m = createMaskedInput({});
+          t.add_cleanup(() => {
+            m.remove();
+          });
           m.addEventListener(
             "cut",
             (e) => {
@@ -1778,35 +1809,40 @@
               cancelable: true,
             })
           );
-          return new Promise((resolve) => {
-            setTimeout(() => {
-              assert_equals(m.value, "test", "cut value");
-              assert_equals(
-                windowLevelEvent.clipboardData?.getData("text"),
-                "",
-                "cut clipboard"
-              );
-              m.remove();
-              resolve();
-            }, 0);
-          });
+          await waitOneTick();
+          assert_equals(m.value, "test", "cut value");
+          assert_equals(
+            windowLevelEvent.clipboardData?.getData("text"),
+            "",
+            "cut clipboard"
+          );
         }, "cut::preventDefault()");
 
-        promise_test(() => {
+        promise_test(async (t) => {
           const m = createMaskedInput({});
+          let stopPropagationCalled = false;
+          let unreachableListenerCalled = false;
+          t.add_cleanup(() => {
+            m.remove();
+          });
           m.addEventListener(
             "cut",
             (e) => {
+              stopPropagationCalled = true;
               e.stopPropagation();
             },
             { once: true }
           );
           const unreachable = (e) => {
+            unreachableListenerCalled = true;
             throw new AssertionError(
               "event propagated after calling event.stopPropagation()"
             );
           };
           window.addEventListener("cut", unreachable, { once: true });
+          t.add_cleanup(() => {
+            window.removeEventListener("cut", unreachable, { once: true });
+          });
 
           m.value = "test";
           m.setSelectionRange(0, 4);
@@ -1818,31 +1854,36 @@
               cancelable: true,
             })
           );
-          return new Promise((resolve) => {
-            setTimeout(() => {
-              assert_equals(m.value, "", "default still works");
-              window.removeEventListener("cut", unreachable, { once: true });
-              m.remove();
-              resolve();
-            }, 0);
-          });
+
+          await waitOneTick();
+          assert_true(stopPropagationCalled);
+          assert_false(unreachableListenerCalled);
+          assert_equals(m.value, "", "default still works");
         }, "cut::stopPropagation()");
 
-        promise_test(() => {
+        promise_test(async (t) => {
+          let stopImmediatePropagationCalled = false;
+          let unreachableListenerCalled = false;
           const m = createMaskedInput({});
           m.addEventListener(
             "cut",
             (e) => {
               e.stopImmediatePropagation();
+              stopImmediatePropagationCalled = true;
             },
             { once: true }
           );
           const unreachable = (e) => {
+            unreachableListenerCalled = true;
             throw new AssertionError(
               "event propagated after calling event.stopImmediatePropagation()"
             );
           };
           m.addEventListener("cut", unreachable, { once: true });
+          t.add_cleanup(() => {
+            m.removeEventListener("cut", unreachable, { once: true });
+            m.remove();
+          });
 
           m.value = "test";
           m.setSelectionRange(0, 4);
@@ -1854,19 +1895,20 @@
               cancelable: true,
             })
           );
-          return new Promise((resolve) => {
-            setTimeout(() => {
-              assert_equals(m.value, "", "default still works");
-              m.removeEventListener("cut", unreachable, { once: true });
-              m.remove();
-              resolve();
-            }, 0);
-          });
+
+          await waitOneTick();
+
+          assert_equals(m.value, "", "default still works");
+          assert_true(stopImmediatePropagationCalled);
+          assert_false(unreachableListenerCalled);
         }, "cut::stopImmediatePropagation()");
 
-        promise_test(() => {
+        promise_test(async (t) => {
           let windowLevelEvent;
           const m = createMaskedInput({});
+          t.add_cleanup(() => {
+            m.remove();
+          });
           m.addEventListener(
             "copy",
             (e) => {
@@ -1892,35 +1934,39 @@
               cancelable: true,
             })
           );
-          return new Promise((resolve) => {
-            setTimeout(() => {
-              assert_equals(
-                windowLevelEvent.clipboardData?.getData("text"),
-                "",
-                "copy clipboard"
-              );
-              m.remove();
-              resolve();
-            }, 0);
-          });
+          await waitOneTick();
+          assert_equals(
+            windowLevelEvent.clipboardData?.getData("text"),
+            "",
+            "copy clipboard"
+          );
         }, "copy::preventDefault()");
 
-        promise_test(() => {
-          let windowLevelEvent;
+        promise_test(async (t) => {
+          let stopPropagationCalled = false;
+          let unreachableListenerCalled = false;
           const m = createMaskedInput({});
+          t.add_cleanup(() => {
+            m.remove();
+          });
           m.addEventListener(
             "copy",
             (e) => {
               e.stopPropagation();
+              stopPropagationCalled = true;
             },
             { once: true }
           );
           const unreachable = (e) => {
+            unreachableListenerCalled = true;
             throw new AssertionError(
               "event propagated after calling event.stopPropagation()"
             );
           };
           window.addEventListener("copy", unreachable, { once: true });
+          t.add_cleanup(() => {
+            window.removeEventListener("copy", unreachable, { once: true });
+          });
 
           m.value = "test";
           m.setSelectionRange(0, 4);
@@ -1932,31 +1978,36 @@
               cancelable: true,
             })
           );
-          return new Promise((resolve) => {
-            setTimeout(() => {
-              window.removeEventListener("copy", unreachable, { once: true });
-              m.remove();
-              resolve();
-            }, 0);
-          });
+
+          await waitOneTick();
+
+          assert_true(stopPropagationCalled);
+          assert_false(unreachableListenerCalled);
         }, "copy::stopPropagation()");
 
-        promise_test(() => {
-          let windowLevelEvent;
+        promise_test(async (t) => {
+          let stopImmediatePropagationCalled = false;
+          let unreachableListenerCalled = false;
           const m = createMaskedInput({});
           m.addEventListener(
             "copy",
             (e) => {
               e.stopImmediatePropagation();
+              stopImmediatePropagationCalled = true;
             },
             { once: true }
           );
           const unreachable = (e) => {
+            unreachableListenerCalled = true;
             throw new AssertionError(
               "event propagated after calling event.stopImmediatePropagation()"
             );
           };
           m.addEventListener("copy", unreachable, { once: true });
+          t.add_cleanup(() => {
+            m.removeEventListener("copy", unreachable, { once: true });
+            m.remove();
+          });
 
           m.value = "test";
           m.setSelectionRange(0, 4);
@@ -1968,18 +2019,18 @@
               cancelable: true,
             })
           );
-          return new Promise((resolve) => {
-            setTimeout(() => {
-              m.removeEventListener("copy", unreachable, { once: true });
-              m.remove();
-              resolve();
-            }, 0);
-          });
+          await waitOneTick();
+
+          assert_true(stopImmediatePropagationCalled);
+          assert_false(unreachableListenerCalled);
         }, "copy::stopImmediatePropagation()");
 
-        promise_test(() => {
+        promise_test(async (t) => {
           let windowLevelEvent;
           const m = createMaskedInput({});
+          t.add_cleanup(() => {
+            m.remove();
+          });
           m.addEventListener(
             "dragstart",
             (e) => {
@@ -2003,34 +2054,43 @@
               cancelable: true,
             })
           );
-          return new Promise((resolve) => {
-            setTimeout(() => {
-              assert_equals(
-                windowLevelEvent.dataTransfer?.getData("text"),
-                "",
-                "drag data"
-              );
-              m.remove();
-              resolve();
-            }, 0);
-          });
+
+          await waitOneTick();
+
+          assert_equals(
+            windowLevelEvent.dataTransfer?.getData("text"),
+            "",
+            "drag data"
+          );
         }, "dragstart::preventDefault()");
 
-        promise_test(() => {
+        promise_test(async (t) => {
+          let stopPropagationCalled = false;
+          let unreachableListenerCalled = false;
           const m = createMaskedInput({});
+          t.add_cleanup(() => {
+            m.remove();
+          });
           m.addEventListener(
             "dragstart",
             (e) => {
               e.stopPropagation();
+              stopPropagationCalled = true;
             },
             { once: true }
           );
           const unreachable = (e) => {
+            unreachableListenerCalled = true;
             throw new AssertionError(
               "event propagated after calling event.stopPropagation()"
             );
           };
           window.addEventListener("dragstart", unreachable, { once: true });
+          t.add_cleanup(() => {
+            window.removeEventListener("dragstart", unreachable, {
+              once: true,
+            });
+          });
 
           m.value = "test";
           m.setSelectionRange(0, 4);
@@ -2041,32 +2101,36 @@
               cancelable: true,
             })
           );
-          return new Promise((resolve) => {
-            setTimeout(() => {
-              window.removeEventListener("dragstart", unreachable, {
-                once: true,
-              });
-              m.remove();
-              resolve();
-            }, 0);
-          });
+
+          await waitOneTick();
+
+          assert_true(stopPropagationCalled);
+          assert_false(unreachableListenerCalled);
         }, "dragstart::stopPropagation()");
 
-        promise_test(() => {
+        promise_test(async (t) => {
+          let stopImmediatePropagationCalled = false;
+          let unreachableListenerCalled = false;
           const m = createMaskedInput({});
           m.addEventListener(
             "dragstart",
             (e) => {
               e.stopImmediatePropagation();
+              stopImmediatePropagationCalled = true;
             },
             { once: true }
           );
           const unreachable = (e) => {
+            unreachableListenerCalled = true;
             throw new AssertionError(
               "event propagated after calling event.stopImmediatePropagation()"
             );
           };
           m.addEventListener("dragstart", unreachable, { once: true });
+          t.add_cleanup(() => {
+            m.removeEventListener("dragstart", unreachable, { once: true });
+            m.remove();
+          });
 
           m.value = "test";
           m.setSelectionRange(0, 4);
@@ -2077,17 +2141,18 @@
               cancelable: true,
             })
           );
-          return new Promise((resolve) => {
-            setTimeout(() => {
-              m.removeEventListener("dragstart", unreachable, { once: true });
-              m.remove();
-              resolve();
-            }, 0);
-          });
+
+          await waitOneTick();
+
+          assert_true(stopImmediatePropagationCalled);
+          assert_false(unreachableListenerCalled);
         }, "dragstart::stopImmediatePropagation()");
 
-        promise_test(() => {
+        promise_test(async (t) => {
           const m = createMaskedInput({});
+          t.add_cleanup(() => {
+            m.remove();
+          });
           m.addEventListener(
             "focus",
             (e) => {
@@ -2104,33 +2169,38 @@
               cancelable: true,
             })
           );
-          return new Promise((resolve) => {
-            setTimeout(() => {
-              // focus should move the caret to the end of the masked value, 4 in this case
-              assert_equals(m.selectionStart, 5, "focus selectionStart");
-              assert_equals(m.selectionEnd, 5, "focus selectionEnd");
-              m.remove();
-              resolve();
-            }, 0);
-          });
+
+          await waitOneTick();
+
+          // focus should move the caret to the end of the masked value, 4 in this case
+          assert_equals(m.selectionStart, 5, "focus selectionStart");
+          assert_equals(m.selectionEnd, 5, "focus selectionEnd");
         }, "focus::preventDefault()");
 
-        promise_test(() => {
-          let windowLevelEvent;
+        promise_test(async (t) => {
+          let stopPropagationCalled = false;
+          let unreachableListenerCalled = false;
           const m = createMaskedInput({});
           m.addEventListener(
             "focus",
             (e) => {
               e.stopPropagation();
+              stopPropagationCalled = true;
             },
             { once: true }
           );
           const unreachable = (e) => {
+            unreachableListenerCalled = true;
             throw new AssertionError(
               "event propagated after calling event.stopPropagation()"
             );
           };
           window.addEventListener("focus", unreachable, { once: true });
+          t.add_cleanup(() => {
+            window.removeEventListener("focus", unreachable, {
+              once: true,
+            });
+          });
 
           m.maskPattern = "_ _ _";
           m.value = "12";
@@ -2141,35 +2211,39 @@
               cancelable: true,
             })
           );
-          return new Promise((resolve) => {
-            setTimeout(() => {
-              assert_equals(m.selectionStart, 4, "default still works");
-              window.removeEventListener("focus", unreachable, {
-                once: true,
-              });
-              m.remove();
-              resolve();
-            }, 0);
-          });
+
+          await waitOneTick();
+
+          assert_equals(m.selectionStart, 4, "default still works");
+          assert_true(stopPropagationCalled);
+          assert_false(unreachableListenerCalled);
         }, "focus::stopPropagation()");
 
-        promise_test(() => {
-          let windowLevelEvent;
+        promise_test(async (t) => {
+          let stopImmediatePropagationCalled = false;
+          let unreachableListenerCalled = false;
           const m = createMaskedInput({});
           m.addEventListener(
             "focus",
             (e) => {
               e.stopImmediatePropagation();
+              stopImmediatePropagationCalled = true;
             },
             { once: true }
           );
           const unreachable = (e) => {
+            unreachableListenerCalled = true;
             throw new AssertionError(
               "event propagated after calling event.stopImmediatePropagation()"
             );
           };
           m.addEventListener("focus", unreachable, { once: true });
 
+          t.add_cleanup(() => {
+            m.removeEventListener("focus", unreachable, { once: true });
+            m.remove();
+          });
+
           m.maskPattern = "_ _ _";
           m.value = "12";
           m.setSelectionRange(5, 5);
@@ -2179,18 +2253,19 @@
               cancelable: true,
             })
           );
-          return new Promise((resolve) => {
-            setTimeout(() => {
-              assert_equals(m.selectionStart, 4, "default still works");
-              m.removeEventListener("focus", unreachable, { once: true });
-              m.remove();
-              resolve();
-            }, 0);
-          });
+
+          await waitOneTick();
+
+          assert_equals(m.selectionStart, 4, "default still works");
+          assert_true(stopImmediatePropagationCalled);
+          assert_false(unreachableListenerCalled);
         }, "focus::stopImmediatePropagation()");
 
-        promise_test(() => {
+        promise_test(async (t) => {
           const m = createMaskedInput({});
+          t.add_cleanup(() => {
+            m.remove();
+          });
           m.addEventListener(
             "mouseup",
             (e) => {
@@ -2208,33 +2283,41 @@
               cancelable: true,
             })
           );
-          return new Promise((resolve) => {
-            setTimeout(() => {
-              // mousedown should move the caret to the end of the masked value, 4 in this case
-              assert_equals(m.selectionStart, 5, "mouseup selectionStart");
-              assert_equals(m.selectionEnd, 5, "mouseup selectionEnd");
-              m.remove();
-              resolve();
-            }, 0);
-          });
+
+          await waitOneTick();
+
+          // mousedown should move the caret to the end of the masked value, 4 in this case
+          assert_equals(m.selectionStart, 5, "mouseup selectionStart");
+          assert_equals(m.selectionEnd, 5, "mouseup selectionEnd");
         }, "mouseup::preventDefault()");
 
-        promise_test(() => {
-          let windowLevelEvent;
+        promise_test(async (t) => {
+          let stopPropagationCalled = false;
+          let unreachableListenerCalled = false;
           const m = createMaskedInput({});
+          t.add_cleanup(() => {
+            m.remove();
+          });
           m.addEventListener(
             "mouseup",
             (e) => {
               e.stopPropagation();
+              stopPropagationCalled = true;
             },
             { once: true }
           );
           const unreachable = (e) => {
+            unreachableListenerCalled = true;
             throw new AssertionError(
               "event propagated after calling event.stopPropagation()"
             );
           };
           window.addEventListener("mouseup", unreachable, { once: true });
+          t.add_cleanup(() => {
+            window.removeEventListener("mouseup", unreachable, {
+              once: true,
+            });
+          });
 
           m.maskPattern = "_ _ _";
           m.value = "12";
@@ -2245,33 +2328,37 @@
               cancelable: true,
             })
           );
-          return new Promise((resolve) => {
-            setTimeout(() => {
-              assert_equals(m.selectionStart, 4, "default still works");
-              window.removeEventListener("mouseup", unreachable, {
-                once: true,
-              });
-              m.remove();
-              resolve();
-            }, 0);
-          });
+
+          await waitOneTick();
+
+          assert_equals(m.selectionStart, 4, "default still works");
+          assert_true(stopPropagationCalled);
+          assert_false(unreachableListenerCalled);
         }, "mouseup::stopPropagation()");
 
-        promise_test(() => {
+        promise_test(async (t) => {
+          let stopImmediatePropagationCalled = false;
+          let unreachableListenerCalled = false;
           const m = createMaskedInput({});
           m.addEventListener(
             "mouseup",
             (e) => {
               e.stopImmediatePropagation();
+              stopImmediatePropagationCalled = true;
             },
             { once: true }
           );
           const unreachable = (e) => {
+            unreachableListenerCalled = true;
             throw new AssertionError(
               "event propagated after calling event.stopImmediatePropagation()"
             );
           };
           m.addEventListener("mouseup", unreachable, { once: true });
+          t.add_cleanup(() => {
+            m.removeEventListener("mouseup", unreachable, { once: true });
+            m.remove();
+          });
 
           m.maskPattern = "_ _ _";
           m.value = "12";
@@ -2282,18 +2369,19 @@
               cancelable: true,
             })
           );
-          return new Promise((resolve) => {
-            setTimeout(() => {
-              assert_equals(m.selectionStart, 4, "default still works");
-              m.removeEventListener("mouseup", unreachable, { once: true });
-              m.remove();
-              resolve();
-            }, 0);
-          });
+
+          await waitOneTick();
+
+          assert_equals(m.selectionStart, 4, "default still works");
+          assert_true(stopImmediatePropagationCalled);
+          assert_false(unreachableListenerCalled);
         }, "mouseup::stopImmediatePropagation()");
 
-        promise_test(() => {
+        promise_test(async (t) => {
           const m = createMaskedInput({});
+          t.add_cleanup(() => {
+            m.remove();
+          });
           m.addEventListener(
             "keydown",
             (e) => {
@@ -2312,31 +2400,40 @@
               cancelable: true,
             })
           );
-          return new Promise((resolve) => {
-            setTimeout(() => {
-              assert_equals(m.selectionStart, 2, "keydown selectionStart");
-              assert_equals(m.selectionEnd, 2, "keydown selectionEnd");
-              m.remove();
-              resolve();
-            }, 0);
-          });
+
+          await waitOneTick();
+
+          assert_equals(m.selectionStart, 2, "keydown selectionStart");
+          assert_equals(m.selectionEnd, 2, "keydown selectionEnd");
         }, "keydown::preventDefault()");
 
-        promise_test(() => {
+        promise_test(async (t) => {
+          let stopPropagationCalled = false;
+          let unreachableListenerCalled = false;
           const m = createMaskedInput({});
+          t.add_cleanup(() => {
+            m.remove();
+          });
           m.addEventListener(
             "keydown",
             (e) => {
               e.stopPropagation();
+              stopPropagationCalled = true;
             },
             { once: true }
           );
           const unreachable = (e) => {
+            unreachableListenerCalled = true;
             throw new AssertionError(
               "event propagated after calling event.stopPropagation()"
             );
           };
           window.addEventListener("keydown", unreachable, { once: true });
+          t.add_cleanup(() => {
+            window.removeEventListener("keydown", unreachable, {
+              once: true,
+            });
+          });
 
           m.maskPattern = "";
           m.value = "123";
@@ -2348,33 +2445,37 @@
               cancelable: true,
             })
           );
-          return new Promise((resolve) => {
-            setTimeout(() => {
-              assert_equals(m.selectionStart, 1, "default still works");
-              window.removeEventListener("keydown", unreachable, {
-                once: true,
-              });
-              m.remove();
-              resolve();
-            }, 0);
-          });
+
+          await waitOneTick();
+
+          assert_equals(m.selectionStart, 1, "default still works");
+          assert_true(stopPropagationCalled);
+          assert_false(unreachableListenerCalled);
         }, "keydown::stopPropagation()");
 
-        promise_test(() => {
+        promise_test(async (t) => {
+          let stopImmediatePropagationCalled = false;
+          let unreachableListenerCalled = false;
           const m = createMaskedInput({});
           m.addEventListener(
             "keydown",
             (e) => {
               e.stopImmediatePropagation();
+              stopImmediatePropagationCalled = true;
             },
             { once: true }
           );
           const unreachable = (e) => {
+            unreachableListenerCalled = true;
             throw new AssertionError(
               "event propagated after calling event.stopImmediatePropagation()"
             );
           };
           m.addEventListener("keydown", unreachable, { once: true });
+          t.add_cleanup(() => {
+            m.removeEventListener("keydown", unreachable, { once: true });
+            m.remove();
+          });
 
           m.maskPattern = "";
           m.value = "123";
@@ -2386,23 +2487,25 @@
               cancelable: true,
             })
           );
-          return new Promise((resolve) => {
-            setTimeout(() => {
-              assert_equals(m.selectionStart, 1, "default still works");
-              m.removeEventListener("keydown", unreachable, { once: true });
-              m.remove();
-              resolve();
-            }, 0);
-          });
+
+          await waitOneTick();
+
+          assert_equals(m.selectionStart, 1, "default still works");
+          assert_true(stopImmediatePropagationCalled);
+          assert_false(unreachableListenerCalled);
         }, "keydown::stopImmediatePropagation()");
 
-        promise_test(() => {
+        promise_test(async (t) => {
           let clipboardData;
           const logClipboardData = (event) => {
             clipboardData = event.clipboardData?.getData("text");
           };
           const m = createMaskedInput({ type: "password" });
           m.addEventListener("copy", logClipboardData, { once: true });
+          t.add_cleanup(() => {
+            m.removeEventListener("copy", logClipboardData, { once: true });
+            m.remove();
+          });
 
           m.value = "test";
           m.setSelectionRange(0, 4);
@@ -2414,23 +2517,23 @@
               cancelable: true,
             })
           );
-          return new Promise((resolve) => {
-            setTimeout(() => {
-              assert_equals(clipboardData, "");
-              m.removeEventListener("copy", logClipboardData, { once: true });
-              m.remove();
-              resolve();
-            }, 0);
-          });
+
+          await waitOneTick();
+
+          assert_equals(clipboardData, "");
         }, "copy should not work on password field");
 
-        promise_test(() => {
+        promise_test(async (t) => {
           let clipboardData;
           const logClipboardData = (event) => {
             clipboardData = event.clipboardData?.getData("text");
           };
           const m = createMaskedInput({ type: "password" });
           m.addEventListener("cut", logClipboardData, { once: true });
+          t.add_cleanup(() => {
+            m.removeEventListener("cut", logClipboardData, { once: true });
+            m.remove();
+          });
 
           m.value = "test";
           m.setSelectionRange(0, 4);
@@ -2442,19 +2545,18 @@
               cancelable: true,
             })
           );
-          return new Promise((resolve) => {
-            setTimeout(() => {
-              assert_equals(clipboardData, "");
-              m.removeEventListener("cut", logClipboardData, { once: true });
-              m.remove();
-              resolve();
-            }, 0);
-          });
+
+          await waitOneTick();
+
+          assert_equals(clipboardData, "");
         }, "cut should not update the clipboard on password field");
 
-        promise_test(() => {
+        promise_test(async (t) => {
           const m = createMaskedInput({
             props: { maskPattern: "(___) ___-____", value: "503" },
+          });
+          t.add_cleanup(() => {
+            m.remove();
           });
           m.setSelectionRange(14, 14);
           m.dispatchEvent(
@@ -2464,19 +2566,18 @@
             })
           );
 
-          return new Promise((resolve) => {
-            setTimeout(() => {
-              assert_equals(m.selectionStart, 6, "selectionStart");
-              assert_equals(m.selectionEnd, 6, "selectionEnd");
-              m.remove();
-              resolve();
-            }, 0);
-          });
+          await waitOneTick();
+
+          assert_equals(m.selectionStart, 6, "selectionStart");
+          assert_equals(m.selectionEnd, 6, "selectionEnd");
         }, "focus should move the caret to the end of the masked value");
 
-        promise_test(() => {
+        promise_test(async (t) => {
           const m = createMaskedInput({
             props: { maskPattern: "(___) ___-____", value: "503" },
+          });
+          t.add_cleanup(() => {
+            m.remove();
           });
           m.setSelectionRange(14, 14);
           m.dispatchEvent(
@@ -2486,14 +2587,10 @@
             })
           );
 
-          return new Promise((resolve) => {
-            setTimeout(() => {
-              assert_equals(m.selectionStart, 6, "selectionStart");
-              assert_equals(m.selectionEnd, 6, "selectionEnd");
-              resolve();
-              m.remove();
-            }, 0);
-          });
+          await waitOneTick();
+
+          assert_equals(m.selectionStart, 6, "selectionStart");
+          assert_equals(m.selectionEnd, 6, "selectionEnd");
         }, "mouseup should move the caret to the end of the masked value");
 
         promise_test(async (t) => {
@@ -2576,7 +2673,7 @@
           // checkCaret(1);
         }, "arrow keys should navigate");
 
-        promise_test((t) => {
+        promise_test(async (t) => {
           const m = createMaskedInput({
             props: { maskPattern: "(___) ___-____", value: "503" },
           });
@@ -2585,18 +2682,17 @@
           });
           m.select();
 
-          return new Promise((resolve) => {
-            setTimeout(() => {
-              assert_equals(m.selectionStart, 0, "selectionStart");
-              assert_equals(m.selectionEnd, 6, "selectionEnd");
-              resolve();
-            }, 0);
-          });
+          await waitOneTick();
+          assert_equals(m.selectionStart, 0, "selectionStart");
+          assert_equals(m.selectionEnd, 6, "selectionEnd");
         }, "select() should select the whole input value");
 
         test((t) => {
           const m1 = createMaskedInput({
             props: { maskPattern: "_-_-_", value: "123" },
+          });
+          t.add_cleanup(() => {
+            m1.remove();
           });
 
           assert_throws_js(
@@ -2611,50 +2707,60 @@
           assert_equals(m1.maskedValue, "4- - ");
           assert_equals(m1.selectionStart, 0);
           assert_equals(m1.selectionEnd, 5);
-          m1.remove();
 
           const m2 = createMaskedInput({
             props: { maskPattern: "_-_-_", value: "123" },
+          });
+          t.add_cleanup(() => {
+            m2.remove();
           });
           m2.setRangeText("4", 1, 4);
           assert_equals(m2.value, "143");
           assert_equals(m2.maskedValue, "1-4-3");
           assert_equals(m2.selectionStart, 1);
           assert_equals(m2.selectionEnd, 4);
-          m2.remove();
 
           const m3 = createMaskedInput({
             props: { maskPattern: "_-_-_-_", value: "1234" },
+          });
+          t.add_cleanup(() => {
+            m3.remove();
           });
           m3.setRangeText("56", 1, 6, "select");
           assert_equals(m3.value, "1564");
           assert_equals(m3.maskedValue, "1-5-6-4");
           assert_equals(m3.selectionStart, 1);
           assert_equals(m3.selectionEnd, 5);
-          m3.remove();
 
           const m4 = createMaskedInput({
             props: { maskPattern: "_-_-_-_", value: "1234" },
+          });
+          t.add_cleanup(() => {
+            m4.remove();
           });
           m4.setRangeText("56", 1, 6, "start");
           assert_equals(m4.value, "1564");
           assert_equals(m4.maskedValue, "1-5-6-4");
           assert_equals(m4.selectionStart, 1);
           assert_equals(m4.selectionEnd, 1);
-          m4.remove();
 
           const m5 = createMaskedInput({
             props: { maskPattern: "_-_-_-_", value: "1234" },
+          });
+          t.add_cleanup(() => {
+            m5.remove();
           });
           m5.setRangeText("56", 1, 6, "end");
           assert_equals(m5.value, "1564");
           assert_equals(m5.maskedValue, "1-5-6-4");
           assert_equals(m5.selectionStart, 5);
           assert_equals(m5.selectionEnd, 5);
-          m5.remove();
 
           const m6 = createMaskedInput({
             props: { maskPattern: "_-_-_-_", value: "1234" },
+          });
+          t.add_cleanup(() => {
+            m6.remove();
           });
           m6.setSelectionRange(1, 6, "backward");
           m6.setRangeText("56");
@@ -2663,7 +2769,6 @@
           assert_equals(m6.selectionStart, 1);
           assert_equals(m6.selectionEnd, 6);
           assert_equals(m6.selectionDirection, "backward");
-          m6.remove();
         }, "setRangeText() should only replace value characters, not mask characters");
 
         test((t) => {
@@ -2858,24 +2963,30 @@
           );
         }, "up and down arrow keys step up and down on number inputs");
 
-        test(() => {
+        promise_test(async (t) => {
           const m1 = createMaskedInput({
             props: { value: "123", maskPattern: "🇺🇸$_🇺🇸$_🇺🇸$_" },
+          });
+          t.add_cleanup(() => {
+            m1.remove();
           });
           assert_equals(m1.maskedValue, "🇺🇸$1🇺🇸$2🇺🇸$3");
           assert_equals(m1.maskReplacementCharacter, "_");
           m1.setAttribute("mask-replacement-character", "$");
+          await waitOneTick();
           assert_equals(m1.maskedValue, "🇺🇸1_🇺🇸2_🇺🇸3_");
           assert_equals(m1.maskReplacementCharacter, "$");
           m1.maskReplacementCharacter = "🇺🇸";
           assert_equals(m1.maskedValue, "1$_2$_3$_");
           assert_equals(m1.maskReplacementCharacter, "🇺🇸");
-          m1.remove();
         }, "can read and set maskReplacementCharacter");
 
-        test(() => {
+        promise_test(async (t) => {
           const m1 = createMaskedInput({
             props: { value: "123", maskPattern: "_ _ _" },
+          });
+          t.add_cleanup(() => {
+            m1.remove();
           });
           assert_equals(m1.maskPattern, "_ _ _");
           assert_equals(m1.maskedValue, "1 2 3");
@@ -2883,25 +2994,28 @@
           assert_equals(m1.maskPattern, "-_-_-_-");
           assert_equals(m1.maskedValue, "-1-2-3-");
           m1.setAttribute("mask-pattern", "**___**");
+          await waitOneTick();
           assert_equals(m1.maskPattern, "**___**");
           assert_equals(m1.maskedValue, "**123**");
-          m1.remove();
 
           const m2 = createMaskedInput({
             attrs: { value: "123", "mask-pattern": "_ _ _" },
           });
+          t.add_cleanup(() => {
+            m2.remove();
+          });
           assert_equals(m2.maskPattern, "_ _ _");
           assert_equals(m2.maskedValue, "1 2 3");
           m2.setAttribute("mask-pattern", "**___**");
+          await waitOneTick();
           assert_equals(m2.maskPattern, "**___**");
           assert_equals(m2.maskedValue, "**123**");
           m2.maskPattern = "-_-_-_-";
           assert_equals(m2.maskPattern, "-_-_-_-");
           assert_equals(m2.maskedValue, "-1-2-3-");
-          m2.remove();
         }, "can read and set maskPattern");
 
-        test(() => {
+        promise_test(async (t) => {
           const m1 = createMaskedInput({
             props: {
               type: "number",
@@ -2909,12 +3023,14 @@
               value: "1234",
             },
           });
+          t.add_cleanup(() => {
+            m1.remove();
+          });
           assert_equals(
             m1.maskedValue,
             "$12.34 USD",
             "filled pattern in number input"
           );
-          m1.remove();
 
           const m2 = createMaskedInput({
             props: {
@@ -2923,12 +3039,14 @@
               value: "123456",
             },
           });
+          t.add_cleanup(() => {
+            m2.remove();
+          });
           assert_equals(
             m2.maskedValue,
             "[•• •• ••]",
             "filled pattern in password input"
           );
-          m2.remove();
 
           const m3 = createMaskedInput({
             props: {
@@ -2937,12 +3055,14 @@
               value: "12",
             },
           });
+          t.add_cleanup(() => {
+            m3.remove();
+          });
           assert_equals(
             m3.maskedValue,
             "$12.   USD",
             "partially filled pattern in number input"
           );
-          m3.remove();
 
           const m4 = createMaskedInput({
             props: {
@@ -2951,12 +3071,14 @@
               value: "1234",
             },
           });
+          t.add_cleanup(() => {
+            m4.remove();
+          });
           assert_equals(
             m4.maskedValue,
             "[•• ••   ]",
             "partially filled pattern in password input"
           );
-          m4.remove();
 
           const m5 = createMaskedInput({
             props: {
@@ -2968,12 +3090,15 @@
               "show-replacement-characters": true,
             },
           });
+          t.add_cleanup(() => {
+            m5.remove();
+          });
+          await waitOneTick();
           assert_equals(
             m5.maskedValue,
             "$12.__ USD",
             "partially filled pattern in number input with replacement characters shown"
           );
-          m5.remove();
 
           const m6 = createMaskedInput({
             props: {
@@ -2985,12 +3110,15 @@
               "show-replacement-characters": true,
             },
           });
+          t.add_cleanup(() => {
+            m6.remove();
+          });
+          await waitOneTick();
           assert_equals(
             m6.maskedValue,
             "[•• •• __]",
             "partially filled pattern in password input with replacement characters shown"
           );
-          m6.remove();
 
           const m7 = createMaskedInput({
             props: {
@@ -3003,12 +3131,15 @@
               "show-replacement-characters": true,
             },
           });
+          t.add_cleanup(() => {
+            m7.remove();
+          });
+          await waitOneTick();
           assert_equals(
             m7.maskedValue,
             "$12.NN USD",
             "partially filled pattern in number input with custom replacement characters shown"
           );
-          m7.remove();
 
           const m8 = createMaskedInput({
             props: {
@@ -3021,12 +3152,15 @@
               "show-replacement-characters": true,
             },
           });
+          t.add_cleanup(() => {
+            m8.remove();
+          });
+          await waitOneTick();
           assert_equals(
             m8.maskedValue,
             "[•• •• NN]",
             "partially filled pattern in password input with custom replacement characters shown"
           );
-          m8.remove();
 
           const m9 = createMaskedInput({
             props: {
@@ -3035,8 +3169,10 @@
               value: "",
             },
           });
+          t.add_cleanup(() => {
+            m9.remove();
+          });
           assert_equals(m9.maskedValue, "", "empty pattern in number input");
-          m9.remove();
 
           const m10 = createMaskedInput({
             props: {
@@ -3045,8 +3181,10 @@
               value: "",
             },
           });
+          t.add_cleanup(() => {
+            m10.remove();
+          });
           assert_equals(m10.maskedValue, "", "empty pattern in password input");
-          m10.remove();
 
           const m11 = createMaskedInput({
             props: {
@@ -3058,12 +3196,15 @@
               "show-empty-mask": true,
             },
           });
+          t.add_cleanup(() => {
+            m11.remove();
+          });
+          await waitOneTick();
           assert_equals(
             m11.maskedValue,
             "$  .   USD",
             "empty pattern in number input with show-empty-mask"
           );
-          m11.remove();
 
           const m12 = createMaskedInput({
             props: {
@@ -3075,12 +3216,15 @@
               "show-empty-mask": true,
             },
           });
+          t.add_cleanup(() => {
+            m12.remove();
+          });
+          await waitOneTick();
           assert_equals(
             m12.maskedValue,
             "[        ]",
             "empty pattern in password input with show-empty-mask"
           );
-          m12.remove();
         }, "can read maskedValue");
 
         test((t) => {
@@ -3093,8 +3237,11 @@
           });
         }, "throws error when attempting to set maskedValue");
 
-        test(() => {
+        promise_test(async (t) => {
           const m1 = createMaskedInput({ props: { value: "123" } });
+          t.add_cleanup(() => {
+            m1.remove();
+          });
           assert_equals(m1.value, "123");
           assert_equals(
             m1.getAttribute("value"),
@@ -3103,9 +3250,12 @@
           );
           m1.value = "456";
           assert_equals(m1.value, "456");
-          m1.remove();
 
           const m2 = createMaskedInput({ attrs: { value: "123" } });
+          t.add_cleanup(() => {
+            m2.remove();
+          });
+          await waitOneTick();
           assert_equals(m2.value, "123");
           assert_equals(
             m2.getAttribute("value"),
@@ -3113,6 +3263,7 @@
             "value set as attribute and not yet modified by prop is reflected"
           );
           m2.setAttribute("value", "456");
+          await waitOneTick();
           assert_equals(m2.value, "456");
           assert_equals(
             m2.getAttribute("value"),
@@ -3127,6 +3278,7 @@
             "value set by prop is not reflected - attribute retains previously set value"
           );
           m2.setAttribute("value", "000");
+          await waitOneTick();
           assert_equals(
             m2.value,
             "789",
@@ -3137,11 +3289,13 @@
             "000",
             "attribute value is returned by getAttribute('value') even though it is not the displayed value"
           );
-          m2.remove();
         }, "can read and set value");
 
-        test(() => {
+        test((t) => {
           const m1 = createMaskedInput({ props: { value: "123" } });
+          t.add_cleanup(() => {
+            m1.remove();
+          });
           assert_true(
             Number.isNaN(m1.valueAsNumber),
             "non-numeric inputs return NaN even for values that could be parsed as numbers"
@@ -3153,10 +3307,12 @@
             },
             "setting valueAsNumber on a non-numeric input throws a DOMException"
           );
-          m1.remove();
 
           const m2 = createMaskedInput({
             props: { type: "number", value: 123 },
+          });
+          t.add_cleanup(() => {
+            m2.remove();
           });
           assert_equals(
             m2.valueAsNumber,
@@ -3193,30 +3349,23 @@
             "strings that can be parsed as numbers but not cast via Number() convert to NaN"
           );
           assert_equals(m2.value, "", "NaN values are not displayed");
-          m2.remove();
         }, "can read and set valueAsNumber for number inputs");
 
-        test(() => {
-          const types = [
-            "text",
-            "url",
-            "search",
-            "tel",
-            "email",
-            "password",
-            "number",
-          ];
-          for (const type of types) {
-            for (const otherType of types) {
-              if (otherType === type) {
+        for (const type of types) {
+          for (const otherType of types) {
+            if (otherType === type) {
+              continue;
+            }
+            for (const otherOtherType of types) {
+              if (otherOtherType === type || otherOtherType === otherType) {
                 continue;
               }
-              for (const otherOtherType of types) {
-                if (otherOtherType === type || otherOtherType === otherType) {
-                  continue;
-                }
 
+              promise_test(async (t) => {
                 const m1 = createMaskedInput({ props: { type } });
+                t.add_cleanup(() => {
+                  m1.remove();
+                });
                 assert_equals(m1.type, type, "type prop can be read");
                 assert_equals(
                   m1.getAttribute("type"),
@@ -3235,30 +3384,100 @@
                   "changes to the type prop are reflected"
                 );
                 m1.setAttribute("type", otherOtherType);
+                await waitOneTick();
                 assert_equals(
                   m1.type,
                   otherOtherType,
                   `setting type attribute from "${otherType}" to "${otherOtherType}" changes prop`
                 );
                 assert_equals(m1.getAttribute("type"), otherOtherType);
-                m1.remove();
 
                 const m2 = createMaskedInput({ attrs: { type } });
+                t.add_cleanup(() => {
+                  m2.remove();
+                });
+                await waitOneTick();
                 assert_equals(m2.type, type);
                 assert_equals(m2.getAttribute("type"), type);
                 m2.setAttribute("type", otherOtherType);
+                await waitOneTick();
                 assert_equals(m2.type, otherOtherType);
                 assert_equals(m2.getAttribute("type"), otherOtherType);
                 m2.type = otherType;
                 assert_equals(m2.type, otherType);
                 assert_equals(m2.getAttribute("type"), otherType);
-                m2.remove();
-              }
+              }, "can read and set type::" + type);
             }
           }
-        }, "can read and set type");
+        }
 
-        test(() => {}, "inputs should not exceed maxlength");
+        promise_test(async (t) => {
+          const m = createMaskedInput({
+            attrs: { maxlength: "2", value: "12", "mask-pattern": "-_-_-_-" },
+          });
+          t.add_cleanup(() => {
+            m.remove();
+          });
+          m.dispatchEvent(
+            new InputEvent("beforeinput", {
+              bubbles: true,
+              cancelable: true,
+              inputType: "insertText",
+              data: "3",
+            })
+          );
+          await waitOneTick();
+          assert_equals(m.value, "12");
+          assert_equals(m.maskedValue, "-1-2- -");
+        }, "inputs should not exceed maxlength");
+
+        promise_test(async (t) => {
+          const m1 = createMaskedInput({
+            attrs: { maxlength: "2", value: "123", "mask-pattern": "-_-_-_-" },
+          });
+          t.add_cleanup(() => {
+            m1.remove();
+          });
+          await waitOneTick();
+          assert_equals(m1.value, "123");
+          assert_equals(m1.maskedValue, "-1-2-3-");
+
+          const m2 = createMaskedInput({
+            props: { maxLength: "2", value: "123" },
+            attrs: { "mask-pattern": "-_-_-_-" },
+          });
+          t.add_cleanup(() => {
+            m2.remove();
+          });
+          await waitOneTick();
+          assert_equals(m2.value, "123");
+          assert_equals(m2.maskedValue, "-1-2-3-");
+        }, "inputs can exceed maxlength when value is explicitly set");
+
+        promise_test(async (t) => {
+          const m = createMaskedInput({
+            props: {
+              type: "number",
+              maxLength: "2",
+              value: "12",
+              maskPattern: "-_-_-_-",
+            },
+          });
+          t.add_cleanup(() => {
+            m.remove();
+          });
+          m.dispatchEvent(
+            new InputEvent("beforeinput", {
+              bubbles: true,
+              cancelable: true,
+              inputType: "insertText",
+              data: "3",
+            })
+          );
+          await waitOneTick();
+          assert_equals(m.value, "123");
+          assert_equals(m.maskedValue, "-1-2-3-");
+        }, "number inputs should ignore maxlength");
 
         test(() => {}, "checkValidity() works");
         test(() => {}, "form validation works");
@@ -3313,7 +3532,7 @@
                     // do not test number fields that use non-numeric values
                     continue;
                   } else {
-                    promise_test(() => {
+                    promise_test(async (t) => {
                       const maskedInput = createMaskedInput({
                         props: {
                           type,
@@ -3323,6 +3542,11 @@
                         },
                         attrs: attributes,
                       });
+
+                      t.add_cleanup(() => {
+                        maskedInput.remove();
+                      });
+
                       let inputEventType;
                       const logEvent = (e) => {
                         inputEventType = e.inputType;
@@ -3330,6 +3554,7 @@
                       maskedInput.addEventListener("input", logEvent, {
                         once: true,
                       });
+
                       maskedInput.setSelectionRange(
                         type === "password" && passwordSelectionStart != null
                           ? passwordSelectionStart
@@ -3348,40 +3573,38 @@
                         })
                       );
 
-                      // wait for event handlers to run, then assert output
-                      return new Promise((resolve) => {
-                        setTimeout(() => {
-                          assert_equals(
-                            type === "password"
-                              ? output.passwordMaskedValue
-                              : output.maskedValue,
-                            maskedInput.maskedValue
-                          );
-                          assert_equals(output.value, maskedInput.value);
-                          assert_equals(
-                            type === "password" &&
-                              output.passwordSelectionStart != null
-                              ? output.passwordSelectionStart
-                              : output.selectionStart,
-                            maskedInput.selectionStart
-                          );
-                          assert_equals(
-                            type === "password" &&
-                              output.passwordSelectionEnd != null
-                              ? output.passwordSelectionEnd
-                              : output.selectionEnd,
-                            maskedInput.selectionEnd
-                          );
-                          assert_equals(
-                            selectionDirection,
-                            maskedInput.selectionDirection
-                          );
-                          assert_equals(inputEventType, inputType);
-                          resolve();
-                        }, 0);
-                      }).then(() => {
-                        maskedInput.remove();
-                      });
+                      await waitOneTick();
+
+                      assert_equals(
+                        type === "password"
+                          ? output.passwordMaskedValue
+                          : output.maskedValue,
+                        maskedInput.maskedValue,
+                        "masked values"
+                      );
+                      assert_equals(output.value, maskedInput.value, "values");
+                      assert_equals(
+                        type === "password" &&
+                          output.passwordSelectionStart != null
+                          ? output.passwordSelectionStart
+                          : output.selectionStart,
+                        maskedInput.selectionStart,
+                        "selection start position"
+                      );
+                      assert_equals(
+                        type === "password" &&
+                          output.passwordSelectionEnd != null
+                          ? output.passwordSelectionEnd
+                          : output.selectionEnd,
+                        maskedInput.selectionEnd,
+                        "selection end position"
+                      );
+                      assert_equals(
+                        selectionDirection,
+                        maskedInput.selectionDirection,
+                        "selection direction"
+                      );
+                      assert_equals(inputEventType, inputType, "input type");
                     }, type + ": " + inputType + ": selectionDirection: " + selectionDirection + ": " + description);
                   }
                 }
