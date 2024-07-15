@@ -996,6 +996,10 @@ class MaskedInput extends HTMLInputElement {
   #handleInput = (event) => {
     const { inputType, data, isComposing } = event;
 
+    if (isComposing) {
+      return;
+    }
+
     if (
       this.#internalType !== "number" &&
       parseInt(this.maxLength, 10) >= 0 &&
@@ -1015,7 +1019,7 @@ class MaskedInput extends HTMLInputElement {
       case "insertFromDrop": // drag-and-drop events
       case "insertFromPaste":
       case "insertFromPasteAsQuotation":
-      case "insertCompositionText":
+      // case "insertCompositionText": // interim values should be ignored, compositionend event will have final value
       case "insertText": {
         event.preventDefault();
         if (
@@ -1358,6 +1362,10 @@ class MaskedInput extends HTMLInputElement {
     this.#trySetSelectionRange(nextStart, nextEnd, nextDirection);
   };
 
+  #handleCompositionEnd = (event) => {
+    this.#insertText(event.data);
+  };
+
   #setSelectionToValidPositions = () => {
     if (this.#replacementSlots === 0) {
       return this.#trySetSelectionRange(0, 0, this.selectionDirection);
@@ -1421,6 +1429,7 @@ class MaskedInput extends HTMLInputElement {
   connectedCallback() {
     this.#setDefaultFor("beforeinput", this.#handleInput);
     this.#setDefaultFor("input", this.#handleAutofill);
+    this.#setDefaultFor("compositionend", this.#handleCompositionEnd);
     this.#setDefaultFor("copy", this.#updateClipboard);
     this.#setDefaultFor("cut", this.#handleCut);
     this.#setDefaultFor("dragstart", this.#handleDragData);
@@ -1440,23 +1449,5 @@ customElements.define("masked-input", MaskedInput, { extends: "input" });
 
 /**
  * TODO:
- * ✅ 1. handle autofill input events (beforeinput is not dispatched for those)
- * 🔳 2. figure out way to declare multiple masks
- *   a. use datalist element and pattern-list attribute to IDREF it
- * ❌ 3. handle imperative formatting
- *   a. add a format-value attribute and property
- *   -- don't add imperative formatting because we would have no way of knowing what's value and what's mask
- * ✅ 4. add options for handling: (hide extra chars, hide mask)
- *   a. no characters (show empty mask)
- *   b. not enough characters for mask (progressive reveal, show replacement characters)
- *   c. too many characters for mask (show overflowed mask) -- DO NOT HIDE EXTRA CHARS; inputs should default
- *      to showing the entire value for a11y. Authors can use maxlength to limit chars to mask size
- * 🔳 5. handle form validation
- * 🔳 6. handle pattern attr
- * 🔳 7. handle min/max length attr
- * 🔳 8. handle number/tel/email/url types
- * ✅ 9. handle copy/cut events
- * ✅ 10. handle arrow key and home/end key presses (navigating & selecting)
- * ✅ 11. handle dragging selected text (only have value characters be in dataTransfer, not mask characters)
- * 12. handle RTL inputs
+ * ctrl + arrow, meta + arrow caret movements
  */
