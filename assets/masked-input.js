@@ -129,6 +129,16 @@ class MaskedInput extends HTMLInputElement {
   }
   set validity(v) {}
 
+  get dir() {
+    return super.dir;
+  }
+  set dir(direction) {
+    if (super.dir !== direction) {
+      super.dir = direction;
+      this.#applyMask();
+    }
+  }
+
   select() {
     this.#trySetSelectionRange(
       this.#characterSlots.at(0)?.start ?? 0,
@@ -286,6 +296,15 @@ class MaskedInput extends HTMLInputElement {
       case "min":
       case "max": {
         this.#setValidity();
+        break;
+      }
+
+      case "dir": {
+        if (super.dir !== newValue) {
+          super.dir = newValue;
+          this.#applyMask();
+        }
+        break;
       }
     }
   }
@@ -305,15 +324,22 @@ class MaskedInput extends HTMLInputElement {
   };
 
   #applyMask = () => {
-    this.#characterSlots = [];
-    const chars = this.#toGraphemes(this.#unmaskedValue ?? "");
+    const isRTL = this.matches(":dir(rtl)");
+    const mask = isRTL
+      ? this.#toGraphemes(this.#mask).slice().reverse().join("")
+      : this.#mask;
+    const unmaskedValue = isRTL
+      ? this.#toGraphemes(this.#unmaskedValue).slice().reverse().join("")
+      : this.#unmaskedValue;
+    const chars = this.#toGraphemes(unmaskedValue ?? "");
 
+    this.#characterSlots = [];
     this.#replacementSlots = 0;
     this.#valueCharacterCount = chars.length;
 
     const usedDisplayChars = [];
     let position = 0;
-    let maskedValue = this.#mask.replaceAll(
+    let maskedValue = mask.replaceAll(
       this.#maskReplacementCharacter,
       (match, offset) => {
         const char = chars.shift();
@@ -370,6 +396,11 @@ class MaskedInput extends HTMLInputElement {
       position = nextPosition;
       maskEndPosition = nextMaskEndPosition;
     });
+
+    if (isRTL) {
+      maskedValue = this.#toGraphemes(maskedValue).reverse().join("");
+      this.#characterSlots.reverse();
+    }
 
     this.#maskedValue = maskedValue;
     const unmaskedDisplayValue = this.#characterSlots
