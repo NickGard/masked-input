@@ -1277,51 +1277,6 @@
           "password",
           "number",
         ];
-        const attributes = [
-          "mask-pattern",
-          "mask-replacement-character",
-          "show-empty-mask",
-          "show-overflowed-mask",
-          "show-replacement-characters",
-          "type",
-          "value",
-          "maxlength",
-          "minlength",
-          "pattern",
-          "inputmode",
-          "required",
-          "step",
-          "min",
-          "max",
-        ];
-        const props = [
-          "maskReplacementCharacter",
-          "maskPattern",
-          "maskedValue",
-          "value",
-          "valueAsNumber",
-          "type",
-        ];
-        const methods = [
-          "select",
-          "setRangeText",
-          "stepUp",
-          "stepDown",
-          "checkValidity",
-          "setAttribute",
-        ];
-        const events = [
-          "beforeinput",
-          "input", // autofill, etc.
-          "cut",
-          "copy",
-          "dragstart",
-          "focus",
-          "mouseup",
-          "keydown",
-          // 'undo',
-          // 'redo',
-        ];
 
         // configurations
         promise_test(async (t) => {
@@ -3593,6 +3548,30 @@
           });
           assert_equals(m.value, "مرحبا بالعالم");
           assert_equals(m.maskedValue, "- -م-ر-ح-ب-ا- -ب-ا-ل-ع-ا-ل-م-");
+          assert_true(m.matches(":dir(rtl)"));
+          assert_equals(m.dir, "rtl");
+          assert_equals(m.getAttribute("dir"), "rtl");
+
+          // change prop
+          m.dir = "ltr";
+          assert_equals(m.maskedValue, "-م-ر-ح-ب-ا- -ب-ا-ل-ع-ا-ل-م- -");
+          assert_true(m.matches(":dir(ltr)"));
+          assert_equals(m.dir, "ltr");
+          assert_equals(m.getAttribute("dir"), "ltr");
+
+          // change attribute
+          m.setAttribute("dir", "rtl");
+          assert_equals(m.maskedValue, "- -م-ر-ح-ب-ا- -ب-ا-ل-ع-ا-ل-م-");
+          assert_true(m.matches(":dir(rtl)"));
+          assert_equals(m.dir, "rtl");
+          assert_equals(m.getAttribute("dir"), "rtl");
+
+          // only enumerated values allowed: auto, rtl, ltr
+          m.dir = "foo";
+          assert_equals(m.maskedValue, "-م-ر-ح-ب-ا- -ب-ا-ل-ع-ا-ل-م- -");
+          assert_true(m.matches(":dir(ltr)"));
+          assert_equals(m.dir, "");
+          assert_equals(m.getAttribute("dir"), "foo");
         }, "mask works on RTL inputs");
         test(() => {},
         "input accepts and masks autocomplete suggestions from list");

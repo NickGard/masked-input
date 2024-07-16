@@ -14,6 +14,7 @@ class MaskedInput extends HTMLInputElement {
     "step",
     "min",
     "max",
+    "dir",
   ];
   // TODO: progressive-reveal="pairwise leading|following"
   // TODO: form validation
@@ -300,8 +301,7 @@ class MaskedInput extends HTMLInputElement {
       }
 
       case "dir": {
-        if (super.dir !== newValue) {
-          super.dir = newValue;
+        if (oldValue !== newValue) {
           this.#applyMask();
         }
         break;
