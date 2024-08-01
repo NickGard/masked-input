@@ -17,8 +17,6 @@ class MaskedInput extends HTMLInputElement {
     "dir",
   ];
   // TODO: progressive-reveal="pairwise leading|following"
-  // TODO: form validation
-  // TODO: test rtl inputs with rtl language
   // TODO: test list attr autocomplete
 
   #unmaskedValue = "";
@@ -669,6 +667,56 @@ class MaskedInput extends HTMLInputElement {
     );
   };
 
+  /**
+   * @param {string} string
+   * @returns {string} the last word and any trailing non-words
+   */
+  #lastWord = (string) => {
+    if (Intl.Segmenter) {
+      const segmenter = new Intl.Segmenter(this.#getElementLang(), {
+        granularity: "word",
+      });
+      const segments = Array.from(segmenter.segment(string));
+      let foundWord = false;
+      return segments.reduceRight((endString, { segment, isWordLike }) => {
+        if (foundWord) return endString;
+        if (isWordLike) {
+          foundWord = true;
+        }
+        return segment + endString;
+      }, "");
+    } else {
+      // won't work for graphemes
+      const [lastWord] = /\b\w+(\W+)?$/.exec(string) ?? [""];
+      return lastWord;
+    }
+  };
+
+  /**
+   * @param {string} string
+   * @returns {string} the first word and any leading non-words
+   */
+  #firstWord = (string) => {
+    if (Intl.Segmenter) {
+      const segmenter = new Intl.Segmenter(this.#getElementLang(), {
+        granularity: "word",
+      });
+      const segments = Array.from(segmenter.segment(string));
+      let foundWord = false;
+      return segments.reduce((startString, { segment, isWordLike }) => {
+        if (foundWord) return startString;
+        if (isWordLike) {
+          foundWord = true;
+        }
+        return startString + segment;
+      }, "");
+    } else {
+      // won't work for graphemes
+      const [firstWord] = /^(\W+)?\w+\b/.exec(string) ?? [""];
+      return firstWord;
+    }
+  };
+
   #deleteWordForward = () => {
     const {
       charIndexBeforeSelection,
@@ -686,37 +734,10 @@ class MaskedInput extends HTMLInputElement {
     const unmaskedCursorPosition = this.#characterSlots.at(
       charIndexAfterSelection
     ).position.start;
-    const valueStart = this.#unmaskedValue.substring(0, unmaskedCursorPosition);
-    const valueEnd = this.#unmaskedValue.substring(unmaskedCursorPosition);
-    let nextValueEnd;
-
-    if (Intl.Segmenter) {
-      const segmenter = new Intl.Segmenter(this.#getElementLang(), {
-        granularity: "word",
-      });
-      const segments = Array.from(segmenter.segment(valueEnd));
-      if (segments.length > 0 && segments[0].isWordLike) {
-        nextValueEnd = segments
-          .slice(1)
-          .map(({ segment }) => segment)
-          .join("");
-      } else if (
-        segments.length > 1 &&
-        /^\s+$/u.test(segments.at(0).segment) &&
-        segments.at(1).isWordLike
-      ) {
-        // remove the leading whitespace segment and the word
-        nextValueEnd = segments
-          .slice(2)
-          .map(({ segment }) => segment)
-          .join("");
-      } else {
-        nextValueEnd = valueEnd;
-      }
-    } else {
-      // won't work for graphemes
-      nextValueEnd = valueEnd.replace(/^\s*\w+\b/, "");
-    }
+    const valueStart = this.#unmaskedValue.slice(0, unmaskedCursorPosition);
+    const valueEnd = this.#unmaskedValue.slice(unmaskedCursorPosition);
+    const nextWord = this.#firstWord(valueEnd);
+    const nextValueEnd = valueEnd.slice(nextWord.length);
 
     const didChange = this.#setValue(valueStart + nextValueEnd);
 
@@ -763,39 +784,14 @@ class MaskedInput extends HTMLInputElement {
     const unmaskedCursorPosition = this.#characterSlots.at(
       charIndexBeforeSelection
     ).position.end;
-    const valueStart = this.#unmaskedValue.substring(0, unmaskedCursorPosition);
+    const valueStart = this.#unmaskedValue.slice(0, unmaskedCursorPosition);
+    const previousWord = this.#lastWord(valueStart);
+    const nextValueStart =
+      previousWord.length > 0
+        ? valueStart.slice(0, -1 * previousWord.length)
+        : valueStart;
 
-    let nextValueStart;
-
-    if (Intl.Segmenter) {
-      const segmenter = new Intl.Segmenter(this.#getElementLang(), {
-        granularity: "word",
-      });
-      const segments = Array.from(segmenter.segment(valueStart));
-      if (segments.length > 0 && segments.at(-1).isWordLike) {
-        nextValueStart = segments
-          .slice(0, -1)
-          .map(({ segment }) => segment)
-          .join("");
-      } else if (
-        segments.length > 1 &&
-        /^\s+$/u.test(segments.at(-1).segment) &&
-        segments.at(-2).isWordLike
-      ) {
-        // remove the trailing whitespace segment and the last word
-        nextValueStart = segments
-          .slice(0, -2)
-          .map(({ segment }) => segment)
-          .join("");
-      } else {
-        nextValueStart = valueStart;
-      }
-    } else {
-      // won't work for graphemes
-      nextValueStart = valueStart.replace(/\b\w+\s*$/, "");
-    }
-
-    const valueEnd = this.#unmaskedValue.substring(unmaskedCursorPosition);
+    const valueEnd = this.#unmaskedValue.slice(unmaskedCursorPosition);
     const didChange = this.#setValue(nextValueStart + valueEnd);
 
     if (!didChange) {
@@ -861,11 +857,8 @@ class MaskedInput extends HTMLInputElement {
         ? this.#characterSlots.at(charIndexAfterSelection).position.start
         : this.#unmaskedValue.length;
 
-    const valueBeginning = this.#unmaskedValue.substring(
-      0,
-      unmaskedSelectionStart
-    );
-    const valueEnd = this.#unmaskedValue.substring(unmaskedSelectionEnd);
+    const valueBeginning = this.#unmaskedValue.slice(0, unmaskedSelectionStart);
+    const valueEnd = this.#unmaskedValue.slice(unmaskedSelectionEnd);
 
     const didChange = this.#setValue(valueBeginning + data + valueEnd);
 
@@ -966,7 +959,7 @@ class MaskedInput extends HTMLInputElement {
       nativeNumberInput.value = value; // coercion and validation will happen here
       this.#unmaskedValue = nativeNumberInput.value;
     } else if (!Number.isNaN(maxLength) && maxLength >= 0) {
-      this.#unmaskedValue = value.substring(0, maxLength);
+      this.#unmaskedValue = value.slice(0, maxLength);
     } else {
       this.#unmaskedValue = value;
     }
@@ -1199,134 +1192,156 @@ class MaskedInput extends HTMLInputElement {
   };
 
   #handleKeyboardNavigation = (event) => {
-    if (
-      ![
-        "ArrowLeft",
-        "ArrowRight",
-        "ArrowUp",
-        "ArrowDown",
-        "Home",
-        "End",
-      ].includes(event.key)
-    ) {
-      return;
-    }
-    event.preventDefault();
+    const { metaKey, altKey, shiftKey, key } = event;
+    if (metaKey && altKey) return; // match browser behavior
 
     const {
       charIndexBeforeSelection,
       charIndexAfterSelection,
       selectedCharIndexes,
     } = this.#getSelectionPosition();
+    const endOrCurrentPosition = Math.max(
+      this.selectionEnd,
+      this.#getEndPosition()
+    );
+    const firstOrCurrentPosition = Math.min(
+      this.selectionStart,
+      this.#getPositionOfCharAtIndex(0).start
+    );
+    const selectionExists = this.selectionStart !== this.selectionEnd;
+    const isBackwardsSelection = this.selectionDirection === "backward";
+    const unmaskedCursorPosition =
+      selectionExists && isBackwardsSelection
+        ? charIndexBeforeSelection != null
+          ? this.#characterSlots.at(charIndexBeforeSelection).position.end
+          : firstOrCurrentPosition
+        : charIndexAfterSelection != null
+        ? this.#characterSlots.at(charIndexAfterSelection).position.start
+        : endOrCurrentPosition;
 
     let nextStart;
     let nextEnd;
     let nextDirection;
 
-    switch (event.key) {
+    switch (key) {
       case "ArrowRight": {
-        let nextCharEnd =
-          charIndexAfterSelection != null
+        const valueBeforeCursor = this.#unmaskedValue.slice(
+          0,
+          unmaskedCursorPosition
+        );
+        const firstWordAfterCursor = this.#firstWord(
+          this.#unmaskedValue.slice(unmaskedCursorPosition)
+        );
+        const nextWordEndPosition =
+          firstWordAfterCursor.length > 0
+            ? this.#getPositionOfCharAtIndex(
+                this.#toGraphemes(valueBeforeCursor + firstWordAfterCursor)
+                  .length - 1
+              ).end
+            : endOrCurrentPosition;
+        const nextCharEndPosition =
+          selectionExists &&
+          isBackwardsSelection &&
+          selectedCharIndexes.length > 0
+            ? this.#getPositionOfCharAtIndex(selectedCharIndexes.at(0)).end
+            : charIndexAfterSelection != null
             ? Math.min(
-                this.#getEndPosition(),
+                endOrCurrentPosition,
                 this.#getPositionOfCharAtIndex(charIndexAfterSelection).end
               )
-            : null;
+            : endOrCurrentPosition;
+        const maybeNextPosition = altKey
+          ? nextWordEndPosition
+          : nextCharEndPosition;
 
-        if (this.selectionStart !== this.selectionEnd) {
-          // text already selected
-          if (event.shiftKey) {
-            // continue selection
-            if (this.selectionDirection === "forward") {
-              nextDirection = "forward";
-              nextStart = this.selectionStart;
-              nextEnd = nextCharEnd ?? this.selectionEnd;
-            } else {
-              // backward
-              nextCharEnd =
-                selectedCharIndexes.length > 0
-                  ? this.#getPositionOfCharAtIndex(selectedCharIndexes.at(0))
-                      .end
-                  : nextCharEnd ?? this.selectionEnd;
-              nextDirection =
-                nextCharEnd > this.selectionEnd
-                  ? "forward"
-                  : nextCharEnd === this.selectionEnd
-                  ? "none"
-                  : "backward";
-              nextStart =
-                nextDirection === "backward" ? nextCharEnd : this.selectionEnd;
-              nextEnd =
-                nextDirection === "forward" ? nextCharEnd : this.selectionEnd;
-            }
-          } else {
-            // remove selection, set cursor to selection end
-            nextDirection = "none";
-            nextStart = this.selectionEnd;
-            nextEnd = this.selectionEnd;
-          }
+        if (metaKey) {
+          nextStart = shiftKey
+            ? isBackwardsSelection
+              ? this.selectionEnd
+              : this.selectionStart
+            : endOrCurrentPosition;
+          nextEnd = endOrCurrentPosition;
         } else {
-          // no text selected
-          nextDirection = "none";
-          nextStart =
-            nextCharEnd == null || event.shiftKey
+          nextStart = shiftKey
+            ? !isBackwardsSelection
               ? this.selectionStart
-              : nextCharEnd;
-          nextEnd = nextCharEnd ?? this.selectionEnd;
+              : maybeNextPosition > this.selectionEnd
+              ? this.selectionEnd
+              : maybeNextPosition
+            : maybeNextPosition;
+          nextEnd = shiftKey
+            ? !isBackwardsSelection
+              ? maybeNextPosition
+              : maybeNextPosition > this.selectionEnd
+              ? maybeNextPosition
+              : this.selectionEnd
+            : maybeNextPosition;
         }
+
+        nextDirection =
+          nextStart === nextEnd
+            ? "none"
+            : nextEnd !== this.selectionEnd
+            ? "forward"
+            : "backward";
         break;
       }
       case "ArrowLeft": {
-        let prevCharStart =
-          charIndexBeforeSelection != null
+        const lastWordBeforeCursor = this.#lastWord(
+          this.#unmaskedValue.slice(0, unmaskedCursorPosition)
+        );
+        const startValueWithoutLastWord = this.#unmaskedValue
+          .slice(0, unmaskedCursorPosition)
+          .slice(0, -1 * lastWordBeforeCursor.length);
+        const previousWordStartPosition =
+          lastWordBeforeCursor.length > 0 &&
+          startValueWithoutLastWord.length > 0
+            ? this.#getPositionOfCharAtIndex(
+                this.#toGraphemes(startValueWithoutLastWord).length - 1
+              ).end
+            : firstOrCurrentPosition;
+        const prevCharStartPosition =
+          selectionExists &&
+          !isBackwardsSelection &&
+          selectedCharIndexes.length > 0
+            ? this.#getPositionOfCharAtIndex(selectedCharIndexes.at(-1)).start
+            : charIndexBeforeSelection != null
             ? this.#getPositionOfCharAtIndex(charIndexBeforeSelection).start
-            : null;
+            : firstOrCurrentPosition;
+        const maybeNextPosition = altKey
+          ? previousWordStartPosition
+          : prevCharStartPosition;
 
-        if (this.selectionStart !== this.selectionEnd) {
-          // text already selected
-          if (event.shiftKey) {
-            // continue selection
-            if (this.selectionDirection === "backward") {
-              nextDirection = "backward";
-              nextStart = this.selectionStart;
-              nextEnd = prevCharStart ?? this.selectionEnd;
-            } else {
-              // forward
-              prevCharStart =
-                selectedCharIndexes.length > 0
-                  ? this.#getPositionOfCharAtIndex(selectedCharIndexes.at(-1))
-                      .start
-                  : prevCharStart ?? this.selectionStart;
-              nextDirection =
-                prevCharStart > this.selectionStart
-                  ? "forward"
-                  : prevCharStart === this.selectionStart
-                  ? "none"
-                  : "backward";
-              nextStart =
-                nextDirection === "backward"
-                  ? prevCharStart
-                  : this.selectionStart;
-              nextEnd =
-                nextDirection === "forward"
-                  ? prevCharStart
-                  : this.selectionStart;
-            }
-          } else {
-            // remove selection, set cursor to selection start
-            nextDirection = "none";
-            nextStart = this.selectionStart;
-            nextEnd = this.selectionStart;
-          }
-        } else {
-          // no text selected
-          nextDirection = "none";
-          nextStart = prevCharStart ?? this.selectionStart;
-          nextEnd =
-            prevCharStart == null || event.shiftKey
+        if (metaKey) {
+          nextStart = firstOrCurrentPosition;
+          nextEnd = shiftKey
+            ? selectionExists && isBackwardsSelection
               ? this.selectionEnd
-              : prevCharStart;
+              : this.selectionStart
+            : firstOrCurrentPosition;
+        } else {
+          nextStart = shiftKey
+            ? isBackwardsSelection
+              ? maybeNextPosition
+              : maybeNextPosition < this.selectionStart
+              ? maybeNextPosition
+              : this.selectionStart
+            : maybeNextPosition;
+          nextEnd = shiftKey
+            ? isBackwardsSelection
+              ? this.selectionEnd
+              : maybeNextPosition < this.selectionStart
+              ? this.selectionStart
+              : maybeNextPosition
+            : maybeNextPosition;
         }
+
+        nextDirection =
+          nextStart === nextEnd
+            ? "none"
+            : nextStart !== this.selectionStart
+            ? "backward"
+            : "forward";
         break;
       }
       case "ArrowDown": {
@@ -1341,7 +1356,7 @@ class MaskedInput extends HTMLInputElement {
       case "End": {
         nextEnd = this.#getEndPosition();
 
-        if (event.shiftKey) {
+        if (shiftKey) {
           // change selection
           if (this.selectionDirection === "backward") {
             nextStart = this.selectionEnd;
@@ -1372,7 +1387,7 @@ class MaskedInput extends HTMLInputElement {
           : 0;
         nextStart = nextPosition;
 
-        if (event.shiftKey) {
+        if (shiftKey) {
           // change selection
           if (this.selectionDirection === "backward") {
             nextEnd = this.selectionEnd;
@@ -1388,8 +1403,13 @@ class MaskedInput extends HTMLInputElement {
         nextDirection = nextStart === nextEnd ? "none" : "backward";
         break;
       }
+      default: {
+        // return early to avoid preventing default and attempting to set the new range
+        return;
+      }
     }
 
+    event.preventDefault();
     this.#trySetSelectionRange(nextStart, nextEnd, nextDirection);
   };
 
@@ -1477,8 +1497,3 @@ class MaskedInput extends HTMLInputElement {
 }
 
 customElements.define("masked-input", MaskedInput, { extends: "input" });
-
-/**
- * TODO:
- * ctrl + arrow, meta + arrow caret movements
- */

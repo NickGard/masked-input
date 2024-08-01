@@ -37,6 +37,11 @@
       value="11"
     />
     <input
+      is="masked-input"
+      value=" aaaa bbbb cccc "
+      mask-pattern="__ __X__.__ __$__'__'__"
+    />
+    <input
       id="RTL"
       is="masked-input"
       dir="rtl"
@@ -44,7 +49,27 @@
       value="مرحبا بالعالم"
     />
     <script>
-      async function createMaskedInput({ props = {}, attrs = {} }) {
+      function createForm() {
+        const form = document.createElement("form");
+        const submitButton = document.createElement("button");
+        form.appendChild(submitButton);
+        form.onsubmit = (e) => {
+          // prevent actual submission and page navigation
+          e.preventDefault();
+        };
+        // form.submit() skips validation
+        form.submitAndValidate = () => {
+          submitButton.click();
+        };
+
+        document.body.appendChild(form);
+
+        return form;
+      }
+      async function createMaskedInput(
+        { props = {}, attrs = {} },
+        anchorEl = document.body
+      ) {
         const maskedInput = document.createElement("input", {
           is: "masked-input",
         });
@@ -58,7 +83,7 @@
           }
         }
 
-        document.body.appendChild(maskedInput);
+        anchorEl.appendChild(maskedInput);
 
         await waitOneTick();
 
@@ -2548,83 +2573,462 @@
         }, "mouseup should move the caret to the end of the masked value");
 
         promise_test(async (t) => {
-          const m = await createMaskedInput({
-            props: { maskPattern: "(___) ___-____", value: "503" },
-          });
+          /*
+          const mask = '__ __X__.__ __$__'__'__';
+          const values = [
+            {
+              value: ' aaaa bbbb cccc ',
+              positions: [
+                {
+                  start: 1,
+                  middle: 4,
+                  end: 7,
+                },
+                {
+                  start: 9,
+                  middle: 12,
+                  end: 14,
+                },
+                {
+                  start: 16,
+                  middle: 19,
+                  end: 22,
+                },
+              ]
+            },
+            {
+              value: 'aaaaaa****cccccc',,
+              positions: [
+                {
+                  start: 0,
+                  middle: 4,
+                  end: 8, // or 9
+                },
+                {
+                  start: 8,
+                  middle: 12,
+                  end: 14,
+                },
+                {
+                  start: 16,
+                  middle: 19,
+                  end: 22,
+                },
+              ]
+            }
+          ];
+          const 
+          // three words with leading and trailing spaces: ' aaaa bbbb cccc '
+          // three word-like segments with no spaces: 'aaaaaa****cccccc' (**** is word-like in that it is bracketed by word boundaries)
+          scenarios = [
+            'start of second word',
+          ]
+          */
+          const m = await createMaskedInput({});
           t.add_cleanup(() => {
             m.remove();
           });
 
-          const left = () =>
+          const left = ({
+            altKey = false,
+            metaKey = false,
+            shiftKey = false,
+          } = {}) =>
             m.dispatchEvent(
               new KeyboardEvent("keydown", {
                 key: "ArrowLeft",
                 bubbles: true,
                 cancelable: true,
+                altKey,
+                metaKey,
+                shiftKey,
               })
             );
-          const right = () =>
+          const right = ({
+            altKey = false,
+            metaKey = false,
+            shiftKey = false,
+          } = {}) =>
             m.dispatchEvent(
               new KeyboardEvent("keydown", {
                 key: "ArrowRight",
                 bubbles: true,
                 cancelable: true,
+                altKey,
+                metaKey,
+                shiftKey,
               })
             );
-          const checkCaret = (expectedPosition, msg) => {
+          const checkSelection = (expectedStart, expectedEnd, msg = "") => {
             assert_equals(
               m.selectionStart,
-              expectedPosition,
-              msg + "selectionStart"
+              expectedStart,
+              msg + "::selectionStart"
             );
-            assert_equals(
-              m.selectionEnd,
-              expectedPosition,
-              msg + "selectionEnd"
-            );
+            assert_equals(m.selectionEnd, expectedEnd, msg + "::selectionEnd");
           };
 
-          // not navigating past mask characters
-          m.setSelectionRange(4, 4);
-          left();
-          await waitOneTick();
-          checkCaret(3, "not navigating past mask characters (left)");
+          // navigate right
+          m.value = " +.*a (/)b <$>c ";
+          m.maskPattern = "__ __X__.__ __$__'__'__";
+          m.setSelectionRange(0, 0);
+          let expectedStops = [
+            1, 2, 4, 5, 7, 8, 10, 11, 13, 14, 16, 17, 19, 20, 22, 23, 23,
+          ];
+          for (let i = 0; i < expectedStops.length; i++) {
+            right();
+            await waitOneTick();
+            checkSelection(
+              expectedStops[i],
+              expectedStops[i],
+              `navigating right ${i + 1} times`
+            );
+          }
+
+          // navigate right from end of input
+          m.value = "ab";
+          m.maskPattern = "__ ";
+          m.setSelectionRange(2, 2);
           right();
           await waitOneTick();
-          checkCaret(4, "not navigating past mask characters (right)");
+          checkSelection(2, 2, "navigate right from end of input");
 
-          // navigate past mask characters
-          m.setSelectionRange(4, 4);
+          // navigate right from end of mask
+          m.value = "ab";
+          m.maskPattern = "__ ";
+          m.setSelectionRange(3, 3);
           right();
           await waitOneTick();
-          checkCaret(6);
-          left();
-          await waitOneTick();
-          checkCaret(3);
+          checkSelection(3, 3, "navigate right from end of mask");
 
-          // navigate left from beginning of mask
+          // navigate left
+          m.value = " a+.* b(/) c<$> ";
+          m.maskPattern = "__ __X__.__ __$__'__'__";
+          m.setSelectionRange(23, 23);
+          expectedStops = [
+            22, 21, 19, 18, 16, 15, 13, 12, 10, 9, 7, 6, 4, 3, 1, 0, 0,
+          ];
+          for (let i = 0; i < expectedStops.length; i++) {
+            left();
+            await waitOneTick();
+            checkSelection(
+              expectedStops[i],
+              expectedStops[i],
+              `navigating left ${i + 1} times`
+            );
+          }
+
+          // navigate left from start of input
+          m.value = "ab";
+          m.maskPattern = " __";
           m.setSelectionRange(1, 1);
           left();
           await waitOneTick();
-          checkCaret(1);
+          checkSelection(1, 1, "navigate left from start of input");
 
-          // navigate right from end of value
-          m.setSelectionRange(6, 6);
-          right();
+          // navigate left from start of mask
+          m.value = "ab";
+          m.maskPattern = "__ ";
+          m.setSelectionRange(0, 0);
+          left();
           await waitOneTick();
-          checkCaret(6);
+          checkSelection(0, 0, "navigate left from start of mask");
 
-          // // navigate right with whole input selected
-          // m.setSelectionRange(0, 14);
-          // right();
-          // await waitOneTick();
-          // checkCaret(6);
+          // alt navigate right
+          m.value = " +.*a (/)b <$>c ";
+          m.maskPattern = "__ __X__.__ __$__'__'__";
+          m.setSelectionRange(0, 0);
+          expectedStops = [7, 14, 22, 23, 23];
+          for (let i = 0; i < expectedStops.length; i++) {
+            right({ altKey: true });
+            await waitOneTick();
+            checkSelection(
+              expectedStops[i],
+              expectedStops[i],
+              `alt navigating right ${i + 1} times`
+            );
+          }
 
-          // // navigate left with whole input selected
-          // m.setSelectionRange(0, 14);
-          // right();
-          // await waitOneTick();
-          // checkCaret(1);
+          // alt navigate right mid-word
+          m.value = "aaaa    bbbb";
+          m.maskPattern = "__ __X__.__ __$__'__'__";
+          m.setSelectionRange(2, 2);
+          right({ altKey: true });
+          await waitOneTick();
+          checkSelection(5, 5, `alt navigating right mid-word`);
+
+          // alt navigate right without leading non-word
+          m.value = "  aa    bbbb";
+          m.maskPattern = "__ __X__.__ __$__'__'__";
+          m.setSelectionRange(2, 2);
+          right({ altKey: true });
+          await waitOneTick();
+          checkSelection(5, 5, `alt navigating right without leading non-word`);
+
+          // alt navigate right from end of input
+          m.value = "ab";
+          m.maskPattern = "__ ";
+          m.setSelectionRange(2, 2);
+          right({ altKey: true });
+          await waitOneTick();
+          checkSelection(2, 2, "alt navigate right from end of input");
+
+          // alt navigate right from end of mask
+          m.value = "ab";
+          m.maskPattern = "__ ";
+          m.setSelectionRange(3, 3);
+          right({ altKey: true });
+          await waitOneTick();
+          checkSelection(3, 3, "alt navigate right from end of mask");
+
+          // alt navigate left
+          m.value = " a+.* b(/) c<$> ";
+          m.maskPattern = "__ __X__.__ __$__'__'__";
+          m.setSelectionRange(23, 23);
+          expectedStops = [16, 8, 1, 0, 0];
+          for (let i = 0; i < expectedStops.length; i++) {
+            left({ altKey: true });
+            await waitOneTick();
+            checkSelection(
+              expectedStops[i],
+              expectedStops[i],
+              `alt navigating left ${i + 1} times`
+            );
+          }
+
+          // alt navigate left mid-word
+          m.value = " aaaa";
+          m.maskPattern = "__ __X__";
+          m.setSelectionRange(4, 4);
+          left({ altKey: true });
+          await waitOneTick();
+          checkSelection(1, 1, `alt navigating left mid-word`);
+
+          // alt navigate left without trailing non-word
+          m.value = "aa bb";
+          m.maskPattern = "__ __ _";
+          m.setSelectionRange(7, 7);
+          left({ altKey: true });
+          await waitOneTick();
+          checkSelection(4, 4, `alt navigating left without trailing non-word`);
+
+          // alt navigate left from start of input
+          m.value = "ab";
+          m.maskPattern = " __";
+          m.setSelectionRange(1, 1);
+          left({ altKey: true });
+          await waitOneTick();
+          checkSelection(1, 1, "alt navigate left from start of input");
+
+          // alt navigate left from start of mask
+          m.value = "ab";
+          m.maskPattern = "__ ";
+          m.setSelectionRange(0, 0);
+          left({ altKey: true });
+          await waitOneTick();
+          checkSelection(0, 0, "alt navigate left from start of mask");
+
+          // navigate right with meta key
+          m.value = "test this";
+          m.maskPattern = " __ __ _ __ __ ";
+          m.setSelectionRange(4, 4);
+          right({ metaKey: true });
+          await waitOneTick();
+          checkSelection(14, 14, "navigate right from mid-word with meta key");
+
+          m.value = "test this";
+          m.maskPattern = " __ __ _ __ __ ";
+          m.setSelectionRange(1, 1);
+          right({ metaKey: true });
+          await waitOneTick();
+          checkSelection(
+            14,
+            14,
+            "navigate right from start of input with meta key"
+          );
+
+          m.value = "test this";
+          m.maskPattern = " __ __ _ __ __ ";
+          m.setSelectionRange(15, 15);
+          right({ metaKey: true });
+          await waitOneTick();
+          checkSelection(
+            15,
+            15,
+            "navigate right from end of mask with meta key"
+          );
+
+          // navigate left with meta key
+          m.value = "test this";
+          m.maskPattern = " __ __ _ __ __ ";
+          m.setSelectionRange(4, 4);
+          left({ metaKey: true });
+          await waitOneTick();
+          checkSelection(1, 1, "navigate left from mid-word with meta key");
+
+          m.value = "test this";
+          m.maskPattern = " __ __ _ __ __ ";
+          m.setSelectionRange(1, 1);
+          left({ metaKey: true });
+          await waitOneTick();
+          checkSelection(
+            1,
+            1,
+            "navigate left from start of input with meta key"
+          );
+
+          m.value = "test this";
+          m.maskPattern = " __ __ _ __ __ ";
+          m.setSelectionRange(0, 0);
+          left({ metaKey: true });
+          await waitOneTick();
+          checkSelection(
+            0,
+            0,
+            "navigate left from start of mask with meta key"
+          );
+
+          // selecting
+          m.value = "aaaa";
+          m.maskPattern = "$_._-_ _";
+          m.setSelectionRange(3, 3);
+          right({ shiftKey: true });
+          await waitOneTick();
+          checkSelection(3, 4, "select right from no selection");
+          right({ shiftKey: true });
+          await waitOneTick();
+          checkSelection(3, 6, "select right from forward selection");
+          left({ shiftKey: true });
+          await waitOneTick();
+          checkSelection(3, 5, "select left from forward selection");
+          left({ shiftKey: true });
+          await waitOneTick();
+          checkSelection(
+            3,
+            3,
+            "select left from forward selection to no selection"
+          );
+          left({ shiftKey: true });
+          await waitOneTick();
+          checkSelection(1, 3, "select left from no selection");
+          right({ shiftKey: true });
+          await waitOneTick();
+          checkSelection(2, 3, "select right from backward selection");
+          right({ shiftKey: true });
+          await waitOneTick();
+          checkSelection(
+            3,
+            4,
+            "select right from backward selection to forward selection"
+          );
+
+          // select right with alt key
+          m.value = "test this";
+          m.maskPattern = " __ __ _ __ __ ";
+          m.setSelectionRange(4, 4);
+          right({ altKey: true, shiftKey: true });
+          await waitOneTick();
+          checkSelection(4, 6, "select right from mid-word with alt key");
+
+          m.value = "test this";
+          m.maskPattern = " __ __ _ __ __ ";
+          m.setSelectionRange(1, 1);
+          right({ altKey: true, shiftKey: true });
+          await waitOneTick();
+          checkSelection(1, 6, "select right from start of input with alt key");
+
+          m.value = "test this";
+          m.maskPattern = " __ __ _ __ __ ";
+          m.setSelectionRange(1, 10, "forward");
+          right({ altKey: true, shiftKey: true });
+          await waitOneTick();
+          checkSelection(
+            1,
+            14,
+            "select right from existing selection with alt key"
+          );
+
+          m.value = "test this";
+          m.maskPattern = " __ __ _ __ __ ";
+          m.setSelectionRange(1, 10, "backward");
+          right({ altKey: true, shiftKey: true });
+          await waitOneTick();
+          checkSelection(
+            6,
+            10,
+            "deselect right from existing selection with alt key"
+          );
+
+          // select left with alt key
+          m.value = "test this";
+          m.maskPattern = " __ __ _ __ __ ";
+          m.setSelectionRange(4, 4);
+          left({ altKey: true, shiftKey: true });
+          await waitOneTick();
+          checkSelection(1, 4, "select left from mid-word with alt key");
+
+          m.value = "test this";
+          m.maskPattern = " __ __ _ __ __ ";
+          m.setSelectionRange(14, 14);
+          left({ altKey: true, shiftKey: true });
+          await waitOneTick();
+          checkSelection(8, 14, "select left from end of input with alt key");
+
+          m.value = "test this";
+          m.maskPattern = " __ __ _ __ __ ";
+          m.setSelectionRange(1, 13, "forward");
+          left({ altKey: true, shiftKey: true });
+          await waitOneTick();
+          checkSelection(
+            1,
+            8,
+            "deselect left from existing selection with alt key"
+          );
+
+          m.value = "test this";
+          m.maskPattern = " __ __ _ __ __ ";
+          m.setSelectionRange(9, 11, "backward");
+          left({ altKey: true, shiftKey: true });
+          await waitOneTick();
+          checkSelection(
+            1,
+            11,
+            "select left from existing selection with alt key"
+          );
+
+          // select left with meta key
+          m.value = "test this";
+          m.maskPattern = " __ __ _ __ __ ";
+          m.setSelectionRange(4, 4);
+          left({ metaKey: true, shiftKey: true });
+          await waitOneTick();
+          checkSelection(1, 4, "select left from mid-word with meta key");
+
+          m.value = "test this";
+          m.maskPattern = " __ __ _ __ __ ";
+          m.setSelectionRange(14, 14);
+          left({ metaKey: true, shiftKey: true });
+          await waitOneTick();
+          checkSelection(1, 14, "select left from end of input with meta key");
+
+          // select right with meta key
+          m.value = "test this";
+          m.maskPattern = " __ __ _ __ __ ";
+          m.setSelectionRange(4, 4);
+          right({ metaKey: true, shiftKey: true });
+          await waitOneTick();
+          checkSelection(4, 14, "select right from mid-word with meta key");
+
+          m.value = "test this";
+          m.maskPattern = " __ __ _ __ __ ";
+          m.setSelectionRange(1, 1);
+          right({ metaKey: true, shiftKey: true });
+          await waitOneTick();
+          checkSelection(
+            1,
+            14,
+            "select right from start of input with meta key"
+          );
         }, "arrow keys should navigate");
 
         promise_test(async (t) => {
@@ -3434,105 +3838,110 @@
         }, "number inputs should ignore maxlength");
 
         promise_test(async (t) => {
-          const m1 = await createMaskedInput({
+          async function testValidation(testName, shouldBeValid, inputOptions) {
+            const form = createForm();
+            const maskedInput = await createMaskedInput(inputOptions, form);
+            t.add_cleanup(() => {
+              form.remove();
+            });
+            if (shouldBeValid) {
+              assert_true(
+                maskedInput.checkValidity(),
+                `${testName}::input.checkValidity() should be return true`
+              );
+              assert_true(
+                form.checkValidity(),
+                `${testName}::form.checkValidity() should be return true`
+              );
+              assert_false(
+                maskedInput.matches(":invalid"),
+                `${testName}::input should not be selected by :invalid`
+              );
+              assert_false(
+                form.matches(":invalid"),
+                `${testName}::form should not be selected by :invalid`
+              );
+              maskedInput.addEventListener("invalid", () => {
+                throw new AssertionError(
+                  `${testName}::input should not dispatch invalid event on form submission`
+                );
+              });
+              form.submitAndValidate();
+
+              await waitOneTick(); // wait for listeners to possibly throw
+            } else {
+              let inputInvalidEventDispatched = false;
+              assert_false(
+                maskedInput.checkValidity(),
+                `${testName}::input.checkValidity() should be return false`
+              );
+              assert_false(
+                form.checkValidity(),
+                `${testName}::form.checkValidity() should be return false`
+              );
+              assert_true(
+                maskedInput.matches(":invalid"),
+                `${testName}::input should be selected by :invalid`
+              );
+              assert_true(
+                form.matches(":invalid"),
+                `${testName}::form should be selected by :invalid`
+              );
+              maskedInput.addEventListener("invalid", () => {
+                inputInvalidEventDispatched = true;
+              });
+              form.submitAndValidate();
+
+              await waitOneTick();
+
+              assert_true(
+                inputInvalidEventDispatched,
+                `${testName}::input hears invalid event on submission`
+              );
+            }
+          }
+
+          await testValidation("pattern mismatch", false, {
             props: { pattern: "\\d*", value: "abc" },
           });
-          t.add_cleanup(() => {
-            m1.remove();
-          });
-          assert_false(
-            m1.checkValidity(),
-            "pattern mismatch should be invalid"
-          );
 
-          const m2 = await createMaskedInput({
+          await testValidation("pattern match", true, {
             props: { pattern: "\\d*", value: "123" },
           });
-          t.add_cleanup(() => {
-            m2.remove();
-          });
-          assert_true(m2.checkValidity(), "pattern matching should be valid");
 
-          const m3 = await createMaskedInput({
+          await testValidation("empty required", false, {
             props: { required: "true" },
           });
-          t.add_cleanup(() => {
-            m3.remove();
-          });
-          assert_false(m3.checkValidity(), "empty required should be invalid");
 
-          const m4 = await createMaskedInput({
+          await testValidation("filled required", true, {
             props: { required: "true", value: "123" },
           });
-          t.add_cleanup(() => {
-            m4.remove();
-          });
-          assert_true(m4.checkValidity(), "filled required should be valid");
 
-          const m5 = await createMaskedInput({
+          await testValidation("number greater than max", false, {
             props: { type: "number", max: "100", value: "123" },
           });
-          t.add_cleanup(() => {
-            m5.remove();
-          });
-          assert_false(
-            m5.checkValidity(),
-            "number greater than max should be invalid"
-          );
 
-          const m6 = await createMaskedInput({
+          await testValidation("number less than or equal to max", true, {
             props: { type: "number", max: "100", value: "100" },
           });
-          t.add_cleanup(() => {
-            m6.remove();
-          });
-          assert_true(
-            m6.checkValidity(),
-            "number less than or equal to max should be valid"
-          );
 
-          const m7 = await createMaskedInput({
+          await testValidation("number less than min", false, {
             props: { type: "number", min: "100", value: "99" },
           });
-          t.add_cleanup(() => {
-            m7.remove();
-          });
-          assert_false(
-            m7.checkValidity(),
-            "number less than min should be invalid"
-          );
 
-          const m8 = await createMaskedInput({
+          await testValidation("number greater than or equal to min", true, {
             props: { type: "number", min: "100", value: "100" },
           });
-          t.add_cleanup(() => {
-            m8.remove();
-          });
-          assert_true(
-            m8.checkValidity(),
-            "number greater than or equal to min should be valid"
-          );
 
-          const m9 = await createMaskedInput({
+          await testValidation("number out of step", false, {
             props: { type: "number", step: "2", value: "3" },
           });
-          t.add_cleanup(() => {
-            m9.remove();
-          });
-          assert_false(
-            m9.checkValidity(),
-            "number out of step should be invalid"
-          );
 
-          const m10 = await createMaskedInput({
+          await testValidation("number in step", true, {
             props: { type: "number", step: "2", value: "4" },
           });
-          t.add_cleanup(() => {
-            m10.remove();
-          });
-          assert_true(m10.checkValidity(), "number in step should be valid");
         }, "checkValidity() works");
-        // test(() => {}, "form validation works");
+
         promise_test(async (t) => {
           const m = await createMaskedInput({
             props: {
@@ -3573,9 +3982,10 @@
           assert_equals(m.dir, "");
           assert_equals(m.getAttribute("dir"), "foo");
         }, "mask works on RTL inputs");
+
         test(() => {},
         "input accepts and masks autocomplete suggestions from list");
-        test(() => {}, "matches :invalid, :user-invalid, and :out-of-range");
+
         promise_test(async (t) => {
           const m = await createMaskedInput({
             props: {
