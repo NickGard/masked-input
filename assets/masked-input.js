@@ -17,7 +17,6 @@ class MaskedInput extends HTMLInputElement {
     "dir",
   ];
   // TODO: progressive-reveal="pairwise leading|following"
-  // TODO: test list attr autocomplete
 
   #unmaskedValue = "";
   #maskedValue = "";
@@ -118,7 +117,8 @@ class MaskedInput extends HTMLInputElement {
 
     // show the correct soft keyboard for the input type
     super.inputMode =
-      type === "password" ? "text" : type === "number" ? "decimal" : type;
+      this.inputMode ||
+      (type === "password" ? "text" : type === "number" ? "decimal" : type);
 
     this.#setValidity();
   }
@@ -256,11 +256,12 @@ class MaskedInput extends HTMLInputElement {
 
         // show the correct soft keyboard for the input type
         super.inputMode =
-          newValue === "password"
+          this.inputMode ||
+          (newValue === "password"
             ? "text"
             : newValue === "number"
             ? "decimal"
-            : newValue;
+            : newValue);
 
         // validate
         this.#setValidity();

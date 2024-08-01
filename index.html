@@ -36,9 +36,14 @@
       max="10"
       value="11"
     />
-    <input is="masked-input" list="L" mask-pattern="__ __X__.__ __$__'__'__" />
+    <input
+      is="masked-input"
+      type="number"
+      list="L"
+      mask-pattern="__ __X__.__ __$__'__'__"
+    />
     <datalist id="L">
-      <option>1234567890</option>
+      <option value="9999999999">1234567890</option>
       <option>abcdefghijk</option>
     </datalist>
     <input
@@ -1535,28 +1540,45 @@
           assert_equals(m3.maskedValue, "<1> {2}3", "showing overflowed mask");
         }, "overflowed masked input in various configurations");
 
-        if (!/apple/i.test(navigator.vendor)) {
-          // Safari doesn't support inputmode
-          promise_test(async () => {
-            Object.entries({
-              text: "text",
-              url: "url",
-              search: "search",
-              tel: "tel",
-              email: "email",
-              password: "text",
-              number: "decimal",
-            }).forEach(async ([type, inputmode]) => {
-              const m1 = await createMaskedInput({ props: { type } });
-              assert_equals(m1.inputMode, inputmode, `[type: ${type}]`);
+        promise_test(async (t) => {
+          Object.entries({
+            text: "text",
+            url: "url",
+            search: "search",
+            tel: "tel",
+            email: "email",
+            password: "text",
+            number: "decimal",
+          }).forEach(async ([type, inputmode]) => {
+            const m1 = await createMaskedInput({ props: { type } });
+            t.add_cleanup(() => {
               m1.remove();
+            });
+            assert_equals(m1.inputMode, inputmode, `[type: ${type}]`);
 
-              const m2 = await createMaskedInput({ attrs: { type } });
-              assert_equals(m2.inputMode, inputmode, `[type: ${type}]`);
+            const m2 = await createMaskedInput({ attrs: { type } });
+            t.add_cleanup(() => {
               m2.remove();
             });
-          }, "inputmode attribute by type");
-        }
+            assert_equals(m2.inputMode, inputmode, `[type: ${type}]`);
+
+            const m3 = await createMaskedInput({
+              props: { type, inputmode: "none" },
+            });
+            t.add_cleanup(() => {
+              m3.remove();
+            });
+            assert_equals(m3.inputMode, "none", "override inputmode prop");
+
+            const m4 = await createMaskedInput({
+              attrs: { type, inputmode: "none" },
+            });
+            t.add_cleanup(() => {
+              m4.remove();
+            });
+            assert_equals(m4.inputMode, "none", "override inputmode attr");
+          });
+        }, "inputmode attribute by type");
 
         if (/apple/i.test(navigator.vendor)) {
           promise_test(async (t) => {
