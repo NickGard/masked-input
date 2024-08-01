@@ -36,11 +36,11 @@
       max="10"
       value="11"
     />
-    <input
-      is="masked-input"
-      value=" aaaa bbbb cccc "
-      mask-pattern="__ __X__.__ __$__'__'__"
-    />
+    <input is="masked-input" list="L" mask-pattern="__ __X__.__ __$__'__'__" />
+    <datalist id="L">
+      <option>1234567890</option>
+      <option>abcdefghijk</option>
+    </datalist>
     <input
       id="RTL"
       is="masked-input"

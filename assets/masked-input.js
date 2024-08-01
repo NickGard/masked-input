@@ -1350,6 +1350,9 @@ class MaskedInput extends HTMLInputElement {
           nextStart = this.#getEndPosition();
           nextEnd = this.#getEndPosition();
           break;
+        } else if (this.list != null && this.#internalType !== "password") {
+          // has an associated datalist; let the browser handle up/down arrows
+          return;
         }
         // else fall through and do the same thing as "End"
       }
@@ -1378,6 +1381,9 @@ class MaskedInput extends HTMLInputElement {
           nextStart = this.#getEndPosition();
           nextEnd = this.#getEndPosition();
           break;
+        } else if (this.list != null && this.#internalType !== "password") {
+          // has an associated datalist; let the browser handle up/down arrows
+          return;
         }
         // else fall through and do the same thing as "Home"
       }
