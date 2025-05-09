@@ -34,7 +34,7 @@
       is="masked-input"
       mask-pattern="___ ___ ___"
       max="10"
-      value="11"
+      value="1a2b3c"
     />
     <input
       is="masked-input"
@@ -1609,6 +1609,41 @@
         }
 
         promise_test(async (t) => {
+          [
+            ["a1b2", "12"],
+            ["1a.2.3b4", "1.234"],
+            ["each2", "e2"],
+            ["1a-2..3ee4e", "12.3e4"],
+            ["a-1-b-2", "-12"],
+            ["--a", ""],
+            ["a.b.c", ""],
+            ["aeb", "e"],
+          ].forEach(async ([input, output]) => {
+            const m = await createMaskedInput({
+              attrs: {
+                type: "number",
+              },
+            });
+            t.add_cleanup(() => {
+              m.remove();
+            });
+
+            m.dispatchEvent(
+              new InputEvent("beforeinput", {
+                bubbles: true,
+                cancelable: true,
+                inputType: "insertText",
+                data: input,
+              })
+            );
+
+            await waitOneTick();
+
+            assert_equals(m.value, output);
+          });
+        }, "non-numeric value into number type input");
+
+        promise_test(async (t) => {
           const m = await createMaskedInput({});
           t.add_cleanup(() => {
             m.remove();
@@ -2639,7 +2674,7 @@
               ]
             }
           ];
-          const 
+          const
           // three words with leading and trailing spaces: ' aaaa bbbb cccc '
           // three word-like segments with no spaces: 'aaaaaa****cccccc' (**** is word-like in that it is bracketed by word boundaries)
           scenarios = [
