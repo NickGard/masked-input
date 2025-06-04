@@ -100,9 +100,9 @@ class MaskedInput extends HTMLInputElement {
     return this.#internalType;
   }
   set type(type) {
-    if (!this.constructor.#maskableTypes.includes(type)) {
+    if (!MaskedInput.#maskableTypes.includes(type)) {
       throw new DOMException(
-        `Cannot set type to ${type}. Masked-input type can only be one of [${this.constructor.#maskableTypes.join(
+        `Cannot set type to ${type}. Masked-input type can only be one of [${MaskedInput.#maskableTypes.join(
           ", "
         )}].`,
         "NotSupportedError"
@@ -166,7 +166,7 @@ class MaskedInput extends HTMLInputElement {
       case "select": {
         const newEnd = this.#getPositionOfCharAtIndex(
           (charIndexBeforeSelection || 0) +
-            this.constructor.#toGraphemes(replacement).length
+            MaskedInput.#toGraphemes(replacement).length
         )?.end;
         this.#trySetSelectionRange(start, newEnd, this.selectionDirection);
         break;
@@ -178,7 +178,7 @@ class MaskedInput extends HTMLInputElement {
       case "end": {
         const newEnd = this.#getPositionOfCharAtIndex(
           (charIndexBeforeSelection || 0) +
-            this.constructor.#toGraphemes(replacement).length
+            MaskedInput.#toGraphemes(replacement).length
         )?.end;
         this.#trySetSelectionRange(newEnd, newEnd, this.selectionDirection);
         break;
@@ -232,9 +232,9 @@ class MaskedInput extends HTMLInputElement {
       }
 
       case "type": {
-        if (!this.constructor.#maskableTypes.includes(newValue)) {
+        if (!MaskedInput.#maskableTypes.includes(newValue)) {
           throw new DOMException(
-            `Cannot set type to ${newValue}. Masked-input type can only be one of [${this.constructor.#maskableTypes.join(
+            `Cannot set type to ${newValue}. Masked-input type can only be one of [${MaskedInput.#maskableTypes.join(
               ", "
             )}].`,
             "NotSupportedError"
@@ -325,16 +325,16 @@ class MaskedInput extends HTMLInputElement {
   #applyMask = () => {
     const isRTL = this.matches(":dir(rtl)");
     const mask = isRTL
-      ? this.constructor.#toGraphemes(this.#mask).slice().reverse().join("")
+      ? MaskedInput.#toGraphemes(this.#mask).slice().reverse().join("")
       : this.#mask;
     const unmaskedValue = isRTL
-      ? this.constructor
+      ? MaskedInput
           .#toGraphemes(this.#unmaskedValue)
           .slice()
           .reverse()
           .join("")
       : this.#unmaskedValue;
-    const chars = this.constructor.#toGraphemes(unmaskedValue ?? "");
+    const chars = MaskedInput.#toGraphemes(unmaskedValue ?? "");
 
     this.#characterSlots = [];
     this.#replacementSlots = 0;
@@ -401,7 +401,7 @@ class MaskedInput extends HTMLInputElement {
     });
 
     if (isRTL) {
-      maskedValue = this.constructor
+      maskedValue = MaskedInput
         .#toGraphemes(maskedValue)
         .reverse()
         .join("");
@@ -809,8 +809,8 @@ class MaskedInput extends HTMLInputElement {
     this.#applyMask();
 
     const beginningCharCount =
-      this.constructor.#toGraphemes(nextValueStart).length;
-    const endCharCount = this.constructor.#toGraphemes(valueEnd).length;
+      MaskedInput.#toGraphemes(nextValueStart).length;
+    const endCharCount = MaskedInput.#toGraphemes(valueEnd).length;
 
     // call #getPositionOfCharAtIndex _after_ applying the mask, in case it changed from masked to unmasked due to unmasked value length
     let nextPosition;
@@ -854,7 +854,7 @@ class MaskedInput extends HTMLInputElement {
       selectedCharIndexes,
       selectionStart,
     } = this.#getSelectionPosition();
-    const insertedTextLength = this.constructor.#toGraphemes(data).length;
+    const insertedTextLength = MaskedInput.#toGraphemes(data).length;
     const unmaskedSelectionStart =
       charIndexBeforeSelection != null
         ? this.#characterSlots.at(charIndexBeforeSelection).position.end
@@ -1110,7 +1110,7 @@ class MaskedInput extends HTMLInputElement {
           /apple/i.test(globalThis.navigator?.vendor) &&
           inputType === "insertText" &&
           this.selectionStart !== this.selectionEnd &&
-          this.constructor.#toGraphemes(data).length === 2
+          MaskedInput.#toGraphemes(data).length === 2
         ) {
           // this is actually a transposition in Safari
           // insertTranspose expects a cursor, not a selection, so find an appropriate position and set the selection range
@@ -1127,7 +1127,7 @@ class MaskedInput extends HTMLInputElement {
         } else {
           this.#insertText(
             this.#internalType === "number"
-              ? this.constructor.#parseNumber(data)
+              ? MaskedInput.#parseNumber(data)
               : data
           );
         }
@@ -1299,7 +1299,7 @@ class MaskedInput extends HTMLInputElement {
         const nextWordEndPosition =
           firstWordAfterCursor.length > 0
             ? this.#getPositionOfCharAtIndex(
-                this.constructor.#toGraphemes(
+                MaskedInput.#toGraphemes(
                   valueBeforeCursor + firstWordAfterCursor
                 ).length - 1
               ).end
@@ -1362,7 +1362,7 @@ class MaskedInput extends HTMLInputElement {
           lastWordBeforeCursor.length > 0 &&
           startValueWithoutLastWord.length > 0
             ? this.#getPositionOfCharAtIndex(
-                this.constructor.#toGraphemes(startValueWithoutLastWord)
+                MaskedInput.#toGraphemes(startValueWithoutLastWord)
                   .length - 1
               ).end
             : firstOrCurrentPosition;
@@ -1488,7 +1488,7 @@ class MaskedInput extends HTMLInputElement {
   #handleCompositionEnd = (event) => {
     this.#insertText(
       this.#internalType === "number"
-        ? this.constructor.#parseNumber(event.data)
+        ? MaskedInput.#parseNumber(event.data)
         : event.data
     );
   };
